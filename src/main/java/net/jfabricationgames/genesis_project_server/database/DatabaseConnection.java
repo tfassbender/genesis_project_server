@@ -1,11 +1,14 @@
 package net.jfabricationgames.genesis_project_server.database;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import javax.sql.DataSource;
 
@@ -33,7 +36,7 @@ public class DatabaseConnection {
 	 * </ul>
 	 */
 	public static final String URL = "jdbc:mysql://mysql?useSSL=false";
-	public static final String DATABASE_CONFIG_RESOURCE_FILE = "database.properties";
+	public static final String DATABASE_CONFIG_RESOURCE_FILE = "config/database.properties";
 	
 	/**
 	 * The passwords are loaded from a properties file "database.properties" which is not added to the git-repository (for obvious reasons)
@@ -45,6 +48,7 @@ public class DatabaseConnection {
 	private static String USER_PASSWORD;
 	private static String USER;
 	private static String DATABASE;
+	private static String DATABASE_BUILD_FILE;
 	
 	public static final String VERSION = "1.0.0";
 	
@@ -89,6 +93,7 @@ public class DatabaseConnection {
 		USER_PASSWORD = databaseConfigProperties.getProperty("MYSQL_USER_PASSWORD");
 		USER = databaseConfigProperties.getProperty("MYSQL_USER");
 		DATABASE = databaseConfigProperties.getProperty("DATABASE");
+		DATABASE_BUILD_FILE = databaseConfigProperties.getProperty("DATABASE_BUILD_FILE");
 		
 		if (USER_PASSWORD == null || USER_PASSWORD.equals("")) {
 			throw new IOException("No password could be loaded from properties.");
@@ -102,12 +107,20 @@ public class DatabaseConnection {
 	}
 	
 	private void createDatabaseResourcesIfNotExists() throws SQLException {
-		String query = "CREATE DATABASE IF NOT EXISTS " + DATABASE + ";";
+		String query;
+		try {
+			File databaseBuild = new File(DATABASE_BUILD_FILE);
+			query = Files.readAllLines(databaseBuild.toPath()).stream().collect(Collectors.joining("\n"));
+		}
+		catch (IOException ioe) {
+			throw new SQLException("query couldn't be loaded", ioe);
+		}
+		
 		DataSource dataSource = getDataSourceWithoutDatabase();
 		try (Connection connection = dataSource.getConnection()) {
 			try (Statement statement = connection.createStatement()) {
 				connection.setAutoCommit(autoCommit);
-				LOGGER.info("Creating database (if not exists); sending query: " + query);
+				LOGGER.info("Creating database resources (if not exists); sending query: " + query);
 				statement.execute(query);
 				
 				connection.commit();
