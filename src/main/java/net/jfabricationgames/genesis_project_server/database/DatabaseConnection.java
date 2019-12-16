@@ -33,11 +33,6 @@ public class DatabaseConnection {
 	 * </ul>
 	 */
 	public static final String URL = "jdbc:mysql://mysql?useSSL=false";
-	public static final String DATABASE = "notebook";
-	public static final String TABLE_NOTES = "notes";
-	public static final String TABLE_EXECUTION_DATES = "execution_dates";
-	public static final String TABLE_REMINDER_DATES = "reminder_dates";
-	
 	public static final String DATABASE_CONFIG_RESOURCE_FILE = "database.properties";
 	
 	/**
@@ -49,6 +44,7 @@ public class DatabaseConnection {
 	 */
 	private static String USER_PASSWORD;
 	private static String USER;
+	private static String DATABASE;
 	
 	public static final String VERSION = "1.0.0";
 	
@@ -92,12 +88,16 @@ public class DatabaseConnection {
 		}
 		USER_PASSWORD = databaseConfigProperties.getProperty("MYSQL_USER_PASSWORD");
 		USER = databaseConfigProperties.getProperty("MYSQL_USER");
+		DATABASE = databaseConfigProperties.getProperty("DATABASE");
 		
 		if (USER_PASSWORD == null || USER_PASSWORD.equals("")) {
 			throw new IOException("No password could be loaded from properties.");
 		}
 		if (USER == null || USER.equals("")) {
 			throw new IOException("No user could be loaded from properties.");
+		}
+		if (DATABASE == null || DATABASE.equals("")) {
+			throw new IOException("No database could be loaded from properties.");
 		}
 	}
 	
