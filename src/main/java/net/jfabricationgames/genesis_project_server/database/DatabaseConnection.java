@@ -20,6 +20,7 @@ import org.apache.logging.log4j.Logger;
 import com.mysql.cj.jdbc.MysqlDataSource;
 
 import net.jfabricationgames.genesis_project_server.exception.GameDataException;
+import net.jfabricationgames.genesis_project_server.exception.GameDataException.Cause;
 
 /**
  * Create a connection to a database and add or get values of one specific table for testing.
@@ -41,6 +42,11 @@ public class DatabaseConnection {
 	 */
 	public static final String URL = "jdbc:mysql://mysql?useSSL=false";
 	public static final String DATABASE_CONFIG_RESOURCE_FILE = "config/database.properties";
+	
+	public static final String TABLE_GAMES = "games";
+	public static final String TABLE_MOVES = "moves";
+	public static final String TABLE_PLAYERS = "players";
+	public static final String TABLE_USERS = "users";
 	
 	/**
 	 * The passwords are loaded from a properties file "database.properties" which is not added to the git-repository (for obvious reasons)
@@ -240,6 +246,61 @@ public class DatabaseConnection {
 		}
 		
 		return affectedRows;
+	}
+	
+	/**
+	 * Creates a DatabaseConnection and capsules the SQLException that might be thrown in a GameDataException.
+	 */
+	public static DatabaseConnection getCheckedDatabaseConnection() throws GameDataException {
+		try {
+			DatabaseConnection connection = getInstance();
+			return connection;
+		}
+		catch (SQLException e) {
+			throw new GameDataException("Database connection could not be established.", Cause.SQL_EXCEPTION);
+		}
+	}
+	
+	/**
+	 * Execute a SQL query in a prepared statement and return the number of affected rows (encapsules the executeSQL method of the
+	 * {@link DatabaseConnection} class by covering a possible SQLException with a {@link GameDataException})
+	 * 
+	 * @param query
+	 *        The query that is executed (as prepared statement)
+	 * 
+	 * @param type
+	 *        The type of the execution
+	 * 
+	 * @param variableSetter
+	 *        A consumer that prepares the statement by setting the variables
+	 * 
+	 * @param resultConsumer
+	 *        A consumer that works on the ResultSet of a query
+	 * 
+	 * @return Depending on the parameter type:
+	 *         <ul>
+	 *         <li>UPDATE: the number of affected rows</li>
+	 *         <li>CREATE: the number of affected rows</li>
+	 *         <li>QUERY: 0</li>
+	 *         </ul>
+	 * 
+	 * @throws GameDataException
+	 *         A {@link GameDataException} is thrown if the update fails for some reason
+	 */
+	public static int executeCheckedSQL(String query, SqlExecutionType type, CheckedSqlConsumer<PreparedStatement> variableSetter,
+			CheckedSqlConsumer<ResultSet> resultConsumer) throws GameDataException {
+		DatabaseConnection dbConnection = DatabaseConnection.getCheckedDatabaseConnection();
+		
+		try {
+			return dbConnection.executeSQL(query, type, variableSetter, resultConsumer);
+		}
+		catch (SQLException sqle) {
+			throw new GameDataException("query execution failed with an SQLException", sqle, Cause.SQL_EXCEPTION);
+		}
+	}
+	
+	public static String getTable(String table) {
+		return getDATABASE() + "." + table;
 	}
 	
 	public static String getUSER() {

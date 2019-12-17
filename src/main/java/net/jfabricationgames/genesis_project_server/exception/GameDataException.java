@@ -23,6 +23,7 @@ public class GameDataException extends Exception {
 	public enum Cause {
 		SQL_EXCEPTION, // 
 		NOT_FOUND, //
-		UNKNOWN,
+		UNKNOWN, //
+		NO_PERMISSION,
 	}
 }

@@ -3,7 +3,6 @@ package net.jfabricationgames.genesis_project_server.game;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -18,11 +17,6 @@ import net.jfabricationgames.genesis_project_server.exception.GameDataException.
 
 public class GameDataManager {
 	
-	public static final String TABLE_GAMES = "games";
-	public static final String TABLE_MOVES = "moves";
-	public static final String TABLE_PLAYERS = "players";
-	public static final String TABLE_USERS = "users";
-	
 	private String game;
 	private int id;
 	
@@ -36,13 +30,13 @@ public class GameDataManager {
 	 *        The game as JSON representation.
 	 */
 	public void updateGame(int id, String game) throws GameDataException {
-		String query = "UPDATE " + getTable(TABLE_GAMES) + " SET data = ? WHERE id = ?";
+		String query = "UPDATE " + DatabaseConnection.getTable(DatabaseConnection.TABLE_GAMES) + " SET data = ? WHERE id = ?";
 		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {
 			ps.setString(1, game);
 			ps.setInt(2, id);
 		};
 		
-		int affectedRows = executeSQL(query, SqlExecutionType.UPDATE, variableSetter, null);
+		int affectedRows = DatabaseConnection.executeCheckedSQL(query, SqlExecutionType.UPDATE, variableSetter, null);
 		
 		//check whether a row was affected by the update (otherwise throw an exception)
 		if (affectedRows == 0) {
@@ -59,7 +53,7 @@ public class GameDataManager {
 	 * @return The game (serialized as JSON)
 	 */
 	public String getGame(int id) throws GameDataException {
-		String query = "SELECT data FROM " + getTable(TABLE_GAMES) + " WHERE id = ?";
+		String query = "SELECT data FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_GAMES) + " WHERE id = ?";
 		
 		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> ps.setInt(1, id);
 		CheckedSqlConsumer<ResultSet> resultConsumer = resultSet -> {
@@ -72,7 +66,7 @@ public class GameDataManager {
 		};
 		
 		//execute the query that puts the result (the game as json string) in the global field game
-		executeSQL(query, SqlExecutionType.QUERY, variableSetter, resultConsumer);
+		DatabaseConnection.executeCheckedSQL(query, SqlExecutionType.QUERY, variableSetter, resultConsumer);
 		
 		if (game == null) {
 			throw new GameDataException("result was not found", Cause.NOT_FOUND);
@@ -90,7 +84,8 @@ public class GameDataManager {
 	 * @return The ID of the game in the database.
 	 */
 	public int createGame(List<String> players) throws GameDataException {
-		String queryCreateGame = "INSERT INTO " + getTable(TABLE_GAMES) + " (id, active, started, last_played, data) VALUES (0, 1, ?, ?, '')";
+		String queryCreateGame = "INSERT INTO " + DatabaseConnection.getTable(DatabaseConnection.TABLE_GAMES)
+				+ " (id, active, started, last_played, data) VALUES (0, 1, ?, ?, '')";
 		
 		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {
 			ps.setDate(1, Date.valueOf(LocalDate.now()));
@@ -106,13 +101,14 @@ public class GameDataManager {
 		};
 		
 		//create the new game
-		executeSQL(queryCreateGame, SqlExecutionType.CREATE, variableSetter, resultConsumer);
+		DatabaseConnection.executeCheckedSQL(queryCreateGame, SqlExecutionType.CREATE, variableSetter, resultConsumer);
 		
 		if (id == -1) {
 			throw new GameDataException("game could not be created", Cause.UNKNOWN);
 		}
 		
-		String queryCreatePlayers = "INSERT INTO " + getTable(TABLE_PLAYERS) + " (user_id, game_id) VALUES ((SELECT id FROM " + getTable(TABLE_USERS)
+		String queryCreatePlayers = "INSERT INTO " + DatabaseConnection.getTable(DatabaseConnection.TABLE_PLAYERS)
+				+ " (user_id, game_id) VALUES ((SELECT id FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS)
 				+ " u WHERE u.username = '?'), ?)";
 		//add all players that participate in the game
 		int affectedRows = 0;
@@ -123,7 +119,7 @@ public class GameDataManager {
 			};
 			
 			//create the player
-			affectedRows = executeSQL(queryCreatePlayers, SqlExecutionType.UPDATE, variableSetter, null);
+			affectedRows = DatabaseConnection.executeCheckedSQL(queryCreatePlayers, SqlExecutionType.UPDATE, variableSetter, null);
 			
 			//check whether a row was affected by the update (otherwise throw an exception)
 			if (affectedRows == 0) {
@@ -156,7 +152,8 @@ public class GameDataManager {
 		}
 		final int finalNum = num;
 		
-		String query = "INSERT INTO " + getTable(TABLE_MOVES) + " (user_id, game_id, move, num) VALUES ((SELECT u.id FROM " + getTable(TABLE_USERS)
+		String query = "INSERT INTO " + DatabaseConnection.getTable(DatabaseConnection.TABLE_MOVES)
+				+ " (user_id, game_id, move, num) VALUES ((SELECT u.id FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS)
 				+ "u WHERE u.username = ?), ?, ?, ?)";
 		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {
 			ps.setString(1, username);
@@ -165,7 +162,7 @@ public class GameDataManager {
 			ps.setInt(4, finalNum);
 		};
 		
-		int affectedRows = executeSQL(query, SqlExecutionType.UPDATE, variableSetter, null);
+		int affectedRows = DatabaseConnection.executeCheckedSQL(query, SqlExecutionType.UPDATE, variableSetter, null);
 		
 		//check whether a row was affected by the update (otherwise throw an exception)
 		if (affectedRows == 0) {
@@ -217,7 +214,7 @@ public class GameDataManager {
 		};
 		
 		//execute the query
-		executeSQL(query, SqlExecutionType.QUERY, variableSetter, resultConsumer);
+		DatabaseConnection.executeCheckedSQL(query, SqlExecutionType.QUERY, variableSetter, resultConsumer);
 		
 		//create a GameList from the results
 		GameList gameList = new GameList();
@@ -232,10 +229,10 @@ public class GameDataManager {
 		if (complete) {
 			sb.append(", g.data");
 		}
-		sb.append(" FROM " + getTable(TABLE_GAMES) + " g");
+		sb.append(" FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_GAMES) + " g");
 		if (!allUsers) {
-			sb.append(" JOIN " + getTable(TABLE_PLAYERS) + " p ON g.id = p.game_id");
-			sb.append(" JOIN " + getTable(TABLE_USERS) + " u ON u.id = p.user_id");
+			sb.append(" JOIN " + DatabaseConnection.getTable(DatabaseConnection.TABLE_PLAYERS) + " p ON g.id = p.game_id");
+			sb.append(" JOIN " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS) + " u ON u.id = p.user_id");
 			sb.append(" WHERE u.username = ?");
 		}
 		return sb.toString();
@@ -294,7 +291,7 @@ public class GameDataManager {
 		};
 		
 		//execute the query
-		executeSQL(query, SqlExecutionType.QUERY, variableSetter, resultConsumer);
+		DatabaseConnection.executeCheckedSQL(query, SqlExecutionType.QUERY, variableSetter, resultConsumer);
 		
 		//create a move list from the results
 		MoveList moveList = new MoveList();
@@ -303,11 +300,11 @@ public class GameDataManager {
 		return moveList;
 	}
 	protected String buildMoveListQuery(boolean allGames, boolean allUsers, boolean allMoves) {
-		StringBuilder sb = new StringBuilder("SELECT m.id, m.num, m.move FROM " + getTable(TABLE_MOVES) + " m");
+		StringBuilder sb = new StringBuilder("SELECT m.id, m.num, m.move FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_MOVES) + " m");
 		
 		if (!allUsers) {
 			//if not all users the username has to be found (by joining)
-			sb.append(" JOIN " + getTable(TABLE_USERS) + " u ON u.id = m.user_id");
+			sb.append(" JOIN " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS) + " u ON u.id = m.user_id");
 		}
 		sb.append(" WHERE");
 		if (allUsers && allGames) {
@@ -335,60 +332,5 @@ public class GameDataManager {
 		}
 		
 		return sb.toString();
-	}
-	
-	/**
-	 * Creates a DatabaseConnection and capsules the SQLException that might be thrown in a GameDataException.
-	 */
-	private DatabaseConnection getDatabaseConnection() throws GameDataException {
-		try {
-			DatabaseConnection connection = DatabaseConnection.getInstance();
-			return connection;
-		}
-		catch (SQLException e) {
-			throw new GameDataException("Database connection could not be established.", Cause.SQL_EXCEPTION);
-		}
-	}
-	
-	/**
-	 * Execute a SQL query in a prepared statement and return the number of affected rows (encapsules the executeSQL method of the
-	 * {@link DatabaseConnection} class by covering a possible SQLException with a {@link GameDataException})
-	 * 
-	 * @param query
-	 *        The query that is executed (as prepared statement)
-	 * 
-	 * @param type
-	 *        The type of the execution
-	 * 
-	 * @param variableSetter
-	 *        A consumer that prepares the statement by setting the variables
-	 * 
-	 * @param resultConsumer
-	 *        A consumer that works on the ResultSet of a query
-	 * 
-	 * @return Depending on the parameter type:
-	 *         <ul>
-	 *         <li>UPDATE: the number of affected rows</li>
-	 *         <li>CREATE: the number of affected rows</li>
-	 *         <li>QUERY: 0</li>
-	 *         </ul>
-	 * 
-	 * @throws GameDataException
-	 *         A {@link GameDataException} is thrown if the update fails for some reason
-	 */
-	private int executeSQL(String query, SqlExecutionType type, CheckedSqlConsumer<PreparedStatement> variableSetter,
-			CheckedSqlConsumer<ResultSet> resultConsumer) throws GameDataException {
-		DatabaseConnection dbConnection = getDatabaseConnection();
-		
-		try {
-			return dbConnection.executeSQL(query, type, variableSetter, resultConsumer);
-		}
-		catch (SQLException sqle) {
-			throw new GameDataException("query execution failed with an SQLException", sqle, Cause.SQL_EXCEPTION);
-		}
-	}
-	
-	protected String getTable(String table) {
-		return DatabaseConnection.getDATABASE() + "." + table;
 	}
 }
