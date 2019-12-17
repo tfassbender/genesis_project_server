@@ -71,12 +71,14 @@ public class GenesisProjectService {
 	 * @return HTTP codes only:
 	 *         <ul>
 	 *         <li>HTTP 200: OK</li>
+	 *         <li>HTTP 404: Game id not found</li>
 	 *         <li>HTTP 500: Failed</li>
 	 *         </ul>
 	 */
 	@GET
-	@Path("set_game/{id}/{game}")
+	@Path("update_game/{id}/{game}")
 	public Response updateGame(@PathParam("id") int id, @PathParam("game") String game) {
+		LOGGER.debug("updateGame was called. parameters: {}, {}", id, game);
 		try {
 			//update the game
 		}
@@ -99,6 +101,7 @@ public class GenesisProjectService {
 	@Path("get_game/{id}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getGame(@PathParam("id") int id) {
+		LOGGER.debug("getGame was called. parameters: {}", id);
 		try {
 			//update the game
 		}
@@ -128,6 +131,7 @@ public class GenesisProjectService {
 	@Path("get_config/{config}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getConfig(@PathParam("config") String config) {
+		LOGGER.debug("getConfig was called. parameters: {}", config);
 		try {
 			//update the game
 		}
@@ -144,8 +148,8 @@ public class GenesisProjectService {
 	 * @param gameId
 	 *        The id of the game in which the move was made.
 	 * 
-	 * @param playerId
-	 *        The id of the player who did the move.
+	 * @param username
+	 *        The name of the player who did the move.
 	 * 
 	 * @param move
 	 *        The move in JSON representation.
@@ -158,8 +162,9 @@ public class GenesisProjectService {
 	 *         </ul>
 	 */
 	@GET
-	@Path("set_move/{game_id}/{player_id}/{move}")
-	public Response setMove(@PathParam("game_id") int gameId, @PathParam("player_id") int playerId, @PathParam("move") String move) {
+	@Path("set_move/{game_id}/{username}/{move}")
+	public Response setMove(@PathParam("game_id") int gameId, @PathParam("username") String username, @PathParam("move") String move) {
+		LOGGER.debug("setMove was called. parameters: {}, {}, {}", gameId, username, move);
 		try {
 			//update the game
 		}
@@ -183,6 +188,7 @@ public class GenesisProjectService {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response createGame(List<String> players) {
+		LOGGER.debug("createGame was called. parameters: {}", players);
 		try {
 			//update the game
 		}
@@ -210,6 +216,7 @@ public class GenesisProjectService {
 	@Path("create_user")
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response createUser(Login login) {
+		LOGGER.debug("createUser was called. parameters: {}", login);
 		try {
 			//update the game
 		}
@@ -238,6 +245,7 @@ public class GenesisProjectService {
 	@Path("update_user")
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response updateUser(List<Login> logins) {
+		LOGGER.debug("updateUser was called. parameters: {}", logins);
 		try {
 			//update the game
 		}
@@ -266,6 +274,7 @@ public class GenesisProjectService {
 	@Path("verify_user")
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response verifyUser(Login login) {
+		LOGGER.debug("verifyUser was called. parameters: {}", login);
 		try {
 			//update the game
 		}
@@ -282,15 +291,16 @@ public class GenesisProjectService {
 	 * @param complete
 	 *        Indicates whether complete games (true) or only ids (false) are requested.
 	 * 
-	 * @param userId
-	 *        The id of a user to search for user specific games (-1 for all users).
+	 * @param username
+	 *        The name of a user to search for user specific games ('-' for all users).
 	 * 
 	 * @return A {@link GameList} object in JSON format that contains the games.
 	 */
 	@GET
-	@Path("list_games/{complete}/{user_id}")
+	@Path("list_games/{complete}/{username}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response listGames(@PathParam("complete") boolean complete, @PathParam("user_id") int userId) {
+	public Response listGames(@PathParam("complete") boolean complete, @PathParam("username") String username) {
+		LOGGER.debug("listGames was called. parameters: {}, {}", complete, username);
 		try {
 			//update the game
 		}
@@ -307,8 +317,8 @@ public class GenesisProjectService {
 	 * @param gameId
 	 *        The id of the game from which the moves should be searched (-1 for all moves of all games).
 	 * 
-	 * @param userId
-	 *        The id of the user from which the moves should be searched (-1 for all users of the game).
+	 * @param username
+	 *        The name of the user from which the moves should be searched ('-' for all users of the game).
 	 * 
 	 * @param numMoves
 	 *        The number of moves that should be searched (last made moves first; -1 for all moves of the game and/or user).
@@ -316,9 +326,10 @@ public class GenesisProjectService {
 	 * @return A {@link MoveList} including the moves in JSON.
 	 */
 	@GET
-	@Path("list_moves/{game_id}/{user_id}/{num_moves}")
+	@Path("list_moves/{game_id}/{username}/{num_moves}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response listMoves(@PathParam("game_id") int gameId, @PathParam("user_id") int userId, @PathParam("num_moves") int numMoves) {
+	public Response listMoves(@PathParam("game_id") int gameId, @PathParam("username") String username, @PathParam("num_moves") int numMoves) {
+		LOGGER.debug("listMoves was called. parameters: {}, {}, {}", gameId, username, numMoves);
 		try {
 			//update the game
 		}

@@ -1,5 +1,6 @@
 package net.jfabricationgames.genesis_project_server.game;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 public class GameList {
@@ -11,11 +12,11 @@ public class GameList {
 	/**
 	 * Maps the game id to the date the game was started.
 	 */
-	private Map<Integer, String> started;
+	private Map<Integer, LocalDate> started;
 	/**
 	 * Maps the game id to the date the game was played the last time.
 	 */
-	private Map<Integer, String> lastPlayed;
+	private Map<Integer, LocalDate> lastPlayed;
 	
 	public GameList() {
 		
@@ -28,17 +29,17 @@ public class GameList {
 		this.games = games;
 	}
 	
-	public Map<Integer, String> getLastPlayed() {
+	public Map<Integer, LocalDate> getLastPlayed() {
 		return lastPlayed;
 	}
-	public void setLastPlayed(Map<Integer, String> lastPlayed) {
+	public void setLastPlayed(Map<Integer, LocalDate> lastPlayed) {
 		this.lastPlayed = lastPlayed;
 	}
 	
-	public Map<Integer, String> getStarted() {
+	public Map<Integer, LocalDate> getStarted() {
 		return started;
 	}
-	public void setStarted(Map<Integer, String> started) {
+	public void setStarted(Map<Integer, LocalDate> started) {
 		this.started = started;
 	}
 }

@@ -16,13 +16,13 @@ CREATE TABLE IF NOT EXISTS genesis_project.games (
 
 CREATE TABLE IF NOT EXISTS genesis_project.players (
 	user_id INT REFERENCES genesis_project.users (id),
-	game_id INT REFERENCES genesis_project.games (id),
+	game_id INT REFERENCES genesis_project.games (id) ON DELETE CASCADE,
 	PRIMARY KEY (user_id, game_id)
 );
 
 CREATE TABLE IF NOT EXISTS genesis_project.moves (
 	user_id INT REFERENCES genesis_project.users (id),
-	game_id INT REFERENCES genesis_project.games (id),
+	game_id INT REFERENCES genesis_project.games (id) ON DELETE CASCADE,
 	move TEXT,
 	num INT,
 	PRIMARY KEY (user_id, game_id)
