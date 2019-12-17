@@ -26,26 +26,22 @@ public class UserDataManager {
 	private String passwordEncryptionKey = "vcuh31250hvcsojnl312vcnlsgr329fdsip";
 	private String salt = "ch48cho2nlc";
 	
-	private MessageDigest md5;
-	
-	private static UserDataManager instance;
+	private static MessageDigest md5;
 	
 	private String password;
+	private boolean userExists;
 	
-	private UserDataManager() throws IllegalStateException {
-		try {
-			md5 = MessageDigest.getInstance("md5");
+	public UserDataManager() throws IllegalStateException {
+		synchronized (this) {
+			if (md5 == null) {
+				try {
+					md5 = MessageDigest.getInstance("md5");
+				}
+				catch (NoSuchAlgorithmException nsae) {
+					throw new IllegalStateException("hash encryptor couldn't be created", nsae);
+				}
+			}
 		}
-		catch (NoSuchAlgorithmException nsae) {
-			throw new IllegalStateException("hash encryptor couldn't be created", nsae);
-		}
-	}
-	
-	public static synchronized UserDataManager getInstance() throws IllegalStateException {
-		if (instance == null) {
-			instance = new UserDataManager();
-		}
-		return instance;
 	}
 	
 	/**
@@ -55,6 +51,9 @@ public class UserDataManager {
 	 *        The login for the user.
 	 */
 	public void createUser(Login login) throws GameDataException {
+		if (userExists(login)) {
+			throw new GameDataException("the user already exists", Cause.NO_PERMISSION);
+		}
 		String query = "INSERT INTO " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS) + " (username, password) VALUES (?, ?)";
 		
 		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {
@@ -128,6 +127,29 @@ public class UserDataManager {
 		else {
 			return false;
 		}
+	}
+	
+	/**
+	 * Check whether a user with the given username exists in the database.
+	 */
+	private boolean userExists(Login login) throws GameDataException {
+		String query = "SELECT COUNT(*) FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS) + " WHERE username = ?";
+		
+		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {
+			ps.setString(1, login.getUsername());
+		};
+		CheckedSqlConsumer<ResultSet> resultConsumer = resultSet -> {
+			if (resultSet.next()) {
+				//if the count is greater than 0 the user exists
+				userExists = resultSet.getInt(1) > 0;
+			}
+		};
+		
+		//check whether the user exists in the database
+		userExists = false;
+		DatabaseConnection.executeCheckedSQL(query, SqlExecutionType.QUERY, variableSetter, resultConsumer);
+		
+		return userExists;
 	}
 	
 	/**

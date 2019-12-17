@@ -15,10 +15,14 @@ import javax.ws.rs.core.Response.Status;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import net.jfabricationgames.genesis_project_server.config.ConfigurationDataManager;
 import net.jfabricationgames.genesis_project_server.database.DatabaseConnection;
+import net.jfabricationgames.genesis_project_server.exception.GameDataException;
+import net.jfabricationgames.genesis_project_server.game.GameDataManager;
 import net.jfabricationgames.genesis_project_server.game.GameList;
 import net.jfabricationgames.genesis_project_server.game.MoveList;
 import net.jfabricationgames.genesis_project_server.user.Login;
+import net.jfabricationgames.genesis_project_server.user.UserDataManager;
 import net.jfabricationgames.genesis_project_server.util.ErrorUtil;
 
 @Path("/genesis_project")
@@ -80,13 +84,17 @@ public class GenesisProjectService {
 	public Response updateGame(@PathParam("id") int id, @PathParam("game") String game) {
 		LOGGER.debug("updateGame was called. parameters: {}, {}", id, game);
 		try {
-			//update the game
+			GameDataManager gameDataManager = new GameDataManager();
+			gameDataManager.updateGame(id, game);
+			
+			return Response.status(Status.OK).build();
+		}
+		catch (GameDataException gde) {
+			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
-			//return an error response
+			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
-		
-		return Response.status(Status.OK).build();
 	}
 	
 	/**
@@ -103,13 +111,17 @@ public class GenesisProjectService {
 	public Response getGame(@PathParam("id") int id) {
 		LOGGER.debug("getGame was called. parameters: {}", id);
 		try {
-			//update the game
+			GameDataManager gameDataManager = new GameDataManager();
+			String game = gameDataManager.getGame(id);
+			
+			return Response.status(Status.OK).entity(game).build();
+		}
+		catch (GameDataException gde) {
+			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
-			//return an error response
+			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
-		
-		return Response.status(Status.OK).build();
 	}
 	
 	/**
@@ -133,13 +145,19 @@ public class GenesisProjectService {
 	public Response getConfig(@PathParam("config") String config) {
 		LOGGER.debug("getConfig was called. parameters: {}", config);
 		try {
-			//update the game
+			ConfigurationDataManager configDataManager = ConfigurationDataManager.getInstance();
+			String configurationFile = configDataManager.getConfiguration(config);
+			
+			if (configurationFile == null) {
+				return Response.status(Status.NOT_FOUND).build();
+			}
+			else {
+				return Response.status(Status.OK).entity(configurationFile).build();
+			}
 		}
 		catch (Exception e) {
-			//return an error response
+			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
-		
-		return Response.status(Status.OK).build();
 	}
 	
 	/**
@@ -166,13 +184,17 @@ public class GenesisProjectService {
 	public Response setMove(@PathParam("game_id") int gameId, @PathParam("username") String username, @PathParam("move") String move) {
 		LOGGER.debug("setMove was called. parameters: {}, {}, {}", gameId, username, move);
 		try {
-			//update the game
+			GameDataManager gameDataManager = new GameDataManager();
+			gameDataManager.setMove(gameId, username, move);
+			
+			return Response.status(Status.OK).build();
+		}
+		catch (GameDataException gde) {
+			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
-			//return an error response
+			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
-		
-		return Response.status(Status.OK).build();
 	}
 	
 	/**
@@ -190,13 +212,17 @@ public class GenesisProjectService {
 	public Response createGame(List<String> players) {
 		LOGGER.debug("createGame was called. parameters: {}", players);
 		try {
-			//update the game
+			GameDataManager gameDataManager = new GameDataManager();
+			int id = gameDataManager.createGame(players);
+			
+			return Response.status(Status.OK).entity(id).build();
+		}
+		catch (GameDataException gde) {
+			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
-			//return an error response
+			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
-		
-		return Response.status(Status.OK).build();
 	}
 	
 	/**
@@ -208,7 +234,7 @@ public class GenesisProjectService {
 	 * @return HTTP codes only:
 	 *         <ul>
 	 *         <li>HTTP 200: OK</li>
-	 *         <li>HTTP 404: The username already exists</li>
+	 *         <li>HTTP 403: The username already exists</li>
 	 *         <li>HTTP 500: Failed</li>
 	 *         </ul>
 	 */
@@ -218,13 +244,17 @@ public class GenesisProjectService {
 	public Response createUser(Login login) {
 		LOGGER.debug("createUser was called. parameters: {}", login);
 		try {
-			//update the game
+			UserDataManager userDataManager = new UserDataManager();
+			userDataManager.createUser(login);
+			
+			return Response.status(Status.OK).build();
+		}
+		catch (GameDataException gde) {
+			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
-			//return an error response
+			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
-		
-		return Response.status(Status.OK).build();
 	}
 	
 	/**
@@ -246,14 +276,21 @@ public class GenesisProjectService {
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response updateUser(List<Login> logins) {
 		LOGGER.debug("updateUser was called. parameters: {}", logins);
+		if (logins.size() < 2) {
+			return Response.status(Status.BAD_REQUEST).build();
+		}
 		try {
-			//update the game
+			UserDataManager userDataManager = new UserDataManager();
+			userDataManager.updateUser(logins.get(0), logins.get(1));
+			
+			return Response.status(Status.OK).build();
+		}
+		catch (GameDataException gde) {
+			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
-			//return an error response
+			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
-		
-		return Response.status(Status.OK).build();
 	}
 	
 	/**
@@ -276,13 +313,20 @@ public class GenesisProjectService {
 	public Response verifyUser(Login login) {
 		LOGGER.debug("verifyUser was called. parameters: {}", login);
 		try {
-			//update the game
+			UserDataManager userDataManager = new UserDataManager();
+			boolean verified = userDataManager.verifyUser(login);
+			
+			if (!verified) {
+				return Response.status(Status.FORBIDDEN).build();
+			}
+			return Response.status(Status.OK).build();
+		}
+		catch (GameDataException gde) {
+			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
-			//return an error response
+			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
-		
-		return Response.status(Status.OK).build();
 	}
 	
 	/**
@@ -302,13 +346,17 @@ public class GenesisProjectService {
 	public Response listGames(@PathParam("complete") boolean complete, @PathParam("username") String username) {
 		LOGGER.debug("listGames was called. parameters: {}, {}", complete, username);
 		try {
-			//update the game
+			GameDataManager gameDataManager = new GameDataManager();
+			GameList gameList = gameDataManager.listGames(complete, username);
+			
+			return Response.status(Status.OK).entity(gameList).build();
+		}
+		catch (GameDataException gde) {
+			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
-			//return an error response
+			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
-		
-		return Response.status(Status.OK).build();
 	}
 	
 	/**
@@ -331,12 +379,38 @@ public class GenesisProjectService {
 	public Response listMoves(@PathParam("game_id") int gameId, @PathParam("username") String username, @PathParam("num_moves") int numMoves) {
 		LOGGER.debug("listMoves was called. parameters: {}, {}, {}", gameId, username, numMoves);
 		try {
-			//update the game
+			GameDataManager gameDataManager = new GameDataManager();
+			MoveList moveList = gameDataManager.listMoves(gameId, username, numMoves);
+			
+			return Response.status(Status.OK).entity(moveList).build();
+		}
+		catch (GameDataException gde) {
+			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
-			//return an error response
+			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
-		
-		return Response.status(Status.OK).build();
+	}
+	
+	/**
+	 * Handle the GameDataExceptions that can be thrown by almost every method.
+	 */
+	private Response handleGameDataException(GameDataException gde) {
+		LOGGER.error("a GameDataException occured", gde);
+		Status responseStatus;
+		switch (gde.getGameDataExceptionCause()) {
+			case NOT_FOUND:
+				responseStatus = Status.NOT_FOUND;
+				break;
+			case NO_PERMISSION:
+				responseStatus = Status.FORBIDDEN;
+				break;
+			case UNKNOWN:
+			case SQL_EXCEPTION:
+			default:
+				responseStatus = Status.INTERNAL_SERVER_ERROR;
+				break;
+		}
+		return Response.status(responseStatus).build();
 	}
 }
