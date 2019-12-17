@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
@@ -16,6 +18,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.mysql.cj.jdbc.MysqlDataSource;
+
+import net.jfabricationgames.genesis_project_server.exception.GameDataException;
 
 /**
  * Create a connection to a database and add or get values of one specific table for testing.
@@ -132,8 +136,7 @@ public class DatabaseConnection {
 		}
 	}
 	
-	@SuppressWarnings("unused")
-	private MysqlDataSource getDataSource() {
+	public MysqlDataSource getDataSource() {
 		//https://www.journaldev.com/2509/java-datasource-jdbc-datasource-example
 		MysqlDataSource dataSource = getDataSourceWithoutDatabase();
 		dataSource.setDatabaseName(DATABASE);
@@ -157,4 +160,92 @@ public class DatabaseConnection {
 		return dataSource;
 	}
 	
+	/**
+	 * Execute a SQL query in a prepared statement and return the number of affected rows.
+	 * 
+	 * @param query
+	 *        The query that is executed (as prepared statement)
+	 * 
+	 * @param type
+	 *        The type of the execution
+	 * 
+	 * @param variableSetter
+	 *        A consumer that prepares the statement by setting the variables
+	 * 
+	 * @param resultConsumer
+	 *        A consumer that works on the ResultSet of a query
+	 * 
+	 * @return Depending on the parameter type:
+	 *         <ul>
+	 *         <li>UPDATE: the number of affected rows</li>
+	 *         <li>CREATE: the number of affected rows</li>
+	 *         <li>QUERY: 0</li>
+	 *         </ul>
+	 * 
+	 * @throws GameDataException
+	 *         A {@link GameDataException} is thrown if the update fails for some reason
+	 */
+	public int executeSQL(String query, SqlExecutionType type, CheckedSqlConsumer<PreparedStatement> variableSetter,
+			CheckedSqlConsumer<ResultSet> resultConsumer) throws SQLException {
+		MysqlDataSource dataSource = getDataSource();
+		
+		LOGGER.debug("executeSQL was called (query: {}, type: {} type)", query, type);
+		
+		int affectedRows = 0;
+		try (Connection connection = dataSource.getConnection()) {
+			connection.setAutoCommit(false);
+			
+			if (type == SqlExecutionType.CREATE) {
+				//create a prepared statement that returns the id of the created object(s)
+				try (PreparedStatement statement = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+					variableSetter.accept(statement);
+					
+					LOGGER.info("executing prepared statement: {}", statement);
+					affectedRows = statement.executeUpdate();
+					
+					//get the generated keys and let the consumer accept them
+					ResultSet result = statement.getGeneratedKeys();
+					resultConsumer.accept(result);
+					
+					connection.commit();
+				}
+				catch (SQLException sqle) {
+					connection.rollback();
+					throw sqle;
+				}
+			}
+			else {
+				//type is UPDATE or QUERY: create a prepared statement without returning the generated keys
+				try (PreparedStatement statement = connection.prepareStatement(query)) {
+					variableSetter.accept(statement);
+					
+					LOGGER.info("executing prepared statement: {}", statement);
+					if (type == SqlExecutionType.UPDATE) {
+						//execute the update and list the number of affected rows
+						affectedRows = statement.executeUpdate();
+					}
+					else if (type == SqlExecutionType.QUERY) {
+						//execute the query and let the consumer accept the result set
+						ResultSet result = statement.executeQuery();
+						resultConsumer.accept(result);
+					}
+					
+					connection.commit();
+				}
+				catch (SQLException sqle) {
+					connection.rollback();
+					throw sqle;
+				}
+			}
+		}
+		
+		return affectedRows;
+	}
+	
+	public static String getUSER() {
+		return USER;
+	}
+	public static String getDATABASE() {
+		return DATABASE;
+	}
 }
