@@ -1,0 +1,58 @@
+{
+  "CLASS_EFFECT_NAMES" : {
+    "SALARANIER" : "",
+    "BORAC" : "",
+    "JORAVAS" : "",
+    "YGDRACK" : "",
+    "GUNRACS" : "",
+    "MUNEN" : "",
+    "WANNARACK" : "",
+    "HERATICS" : "",
+    "LEGION" : "",
+    "CRAGONS" : "",
+    "ENCOR" : "",
+    "NOVOX" : ""
+  },
+  "CLASS_EFFECT_DESCRIPTIONS" : {
+    "SALARANIER" : "Forschungspunkte für das Errichten von Kolonien auf Planeten mit Nachbarn (andere Spieler)",
+    "BORAC" : "Bonusresourcen wenn ein Nachbar Baut/Aufrüstet (P-Resource des Nachbarn)",
+    "JORAVAS" : "Bonusresourcen beim Besiedeln neuer Planeten (P-Resource des Planeten)",
+    "YGDRACK" : "Ein Startgebäude mehr",
+    "GUNRACS" : "Handelsposten mit Nachbarn erhallten + 1 P-Resource des Nachbarn als Ertrag",
+    "MUNEN" : "Punkte für Kooperative Forschungen",
+    "WANNARACK" : "Ein Startgebäude Weniger; FTL-Reichweite + 1",
+    "HERATICS" : "Tauschen von Punkten gegen Resourcen: P: 1 Punkt, S: 2 Punkte, T: 4 Punkte",
+    "LEGION" : "Start mit (nur) einem Regierungssitz; Nur eine Allianz möglich; Erhällt Allianzmarker für die Vergrößerung dieser Allianz",
+    "CRAGONS" : "Bonuspunkte für Allianzgründungen",
+    "ENCOR" : "Punkte für das Besiedeln von Planeten (S-Planeten: 1 Punkt; T-Planeten: 2 Punkte)",
+    "NOVOX" : "1 EK beim Errichten eines Labors oder einer Forschungsanlage"
+  },
+  "GOVERNMENT_EFFECT_NAMES" : {
+    "SALARANIER" : "",
+    "BORAC" : "",
+    "JORAVAS" : "",
+    "YGDRACK" : "",
+    "GUNRACS" : "",
+    "MUNEN" : "",
+    "WANNARACK" : "",
+    "HERATICS" : "",
+    "LEGION" : "",
+    "CRAGONS" : "",
+    "ENCOR" : "",
+    "NOVOX" : ""
+  },
+  "GOVERNMENT_EFFECT_DESCRIPTIONS" : {
+    "SALARANIER" : "FP und EK für das Errichten von Laboren und Forschungsanlagen mit Nachbarn (andere Spieler)",
+    "BORAC" : "1x FP für jeden Besiedelten Planeten der ein Labor/eine Forschungsanlage enthällt (auch Labore/Forschungsanlagen anderer Spieler)",
+    "JORAVAS" : "Umwandeln von Resourcen: P->S: 2:1; S->T: 3:1",
+    "YGDRACK" : "Zug: Gratis Kolonie auf einem schon (von diesem Spieler) besiedelten Planeten errichten",
+    "GUNRACS" : "Zug: Gratis Kolonie zu Handelsposten",
+    "MUNEN" : "Punkte für jedes gebaute Labor (am Ende der Runde)",
+    "WANNARACK" : "Zug (combo): Reichweite +1 (falls in der Runde nicht benutzt kann die Fähigkeit auch für Angriffe verwendet werden)",
+    "HERATICS" : "1x Punkte für jede Miene auf S-/T-Planeten",
+    "LEGION" : "Zug: Kolonien auf Heimatplaneten können gratis zu Mienen, Handelsposten oder Laboren aufgerüstet werden",
+    "CRAGONS" : "1x Erhallt einer beliebigen Zusatztechnologie",
+    "ENCOR" : "FP meim Besiedeln neuer Planetenarten",
+    "NOVOX" : "Wurmlochsprung: +2 Reichweite; kostet 1 EK; Bringt Punkte"
+  }
+}

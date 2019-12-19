@@ -132,7 +132,7 @@ public class GenesisProjectService {
 	 *        Options are:
 	 *        <ul>
 	 *        <li>"constants": loads constant values for the game</li>
-	 *        <li>"class_effects": loads the class effect descriptions for all classes</li>
+	 *        <li>"description_texts": loads all description texts</li>
 	 *        <li>"main_menu_dynamic_content": loads the dynamic content that is displayed in the main menu</li>
 	 *        </ul>
 	 * 
