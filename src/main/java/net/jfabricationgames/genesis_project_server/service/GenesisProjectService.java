@@ -295,6 +295,7 @@ public class GenesisProjectService {
 	 * @return HTTP codes only:
 	 *         <ul>
 	 *         <li>HTTP 200: OK</li>
+	 *         <li>HTTP 400: Not enough logins in the list (have to be 2)</li>
 	 *         <li>HTTP 403: User validation failed</li>
 	 *         <li>HTTP 404: A user with the update name already exists</li>
 	 *         <li>HTTP 500: Failed</li>
