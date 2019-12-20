@@ -1,6 +1,9 @@
 package net.jfabricationgames.genesis_project_server.service;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
+import java.util.Properties;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -29,6 +32,32 @@ import net.jfabricationgames.genesis_project_server.util.ErrorUtil;
 public class GenesisProjectService {
 	
 	private static final Logger LOGGER = LogManager.getLogger(GenesisProjectService.class);
+	
+	public static final String TEST_CONFIG_RESOURCE_FILE = "config/test.properties";
+	private static Properties testProperties;
+	
+	static {
+		try {
+			loadTestConfig();
+		}
+		catch (IOException ioe) {
+			LOGGER.fatal("test configuration properties couldn't be loaded (ending programm because of unclear state)", ioe);
+			System.exit(1);
+		}
+	}
+	
+	private static void loadTestConfig() throws IOException {
+		ClassLoader loader = Thread.currentThread().getContextClassLoader();
+		try (InputStream resourceStream = loader.getResourceAsStream(TEST_CONFIG_RESOURCE_FILE)) {
+			testProperties.load(resourceStream);
+		}
+		if (!testProperties.containsKey("test")) {
+			throw new IOException("property 'test' not found");
+		}
+		else if (isTestRun()) {
+			LOGGER.warn(">>>> GenesisProjectServer started as test run");
+		}
+	}
 	
 	/**
 	 * A simple hello world to test whether the service is reachable
@@ -411,5 +440,12 @@ public class GenesisProjectService {
 				break;
 		}
 		return Response.status(responseStatus).build();
+	}
+	
+	public static Properties getTestProperties() {
+		return testProperties;
+	}
+	public static boolean isTestRun() {
+		return Boolean.parseBoolean(testProperties.getProperty("test"));
 	}
 }

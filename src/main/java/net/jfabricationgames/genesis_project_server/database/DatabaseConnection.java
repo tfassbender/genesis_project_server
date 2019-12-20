@@ -21,6 +21,7 @@ import com.mysql.cj.jdbc.MysqlDataSource;
 
 import net.jfabricationgames.genesis_project_server.exception.GameDataException;
 import net.jfabricationgames.genesis_project_server.exception.GameDataException.Cause;
+import net.jfabricationgames.genesis_project_server.service.GenesisProjectService;
 
 /**
  * Create a connection to a database and add or get values of one specific table for testing.
@@ -113,6 +114,12 @@ public class DatabaseConnection {
 		}
 		if (DATABASE == null || DATABASE.equals("")) {
 			throw new IOException("No database could be loaded from properties.");
+		}
+		
+		if (GenesisProjectService.isTestRun()) {
+			//use a test database that is deleted before use to create a new testing environment
+			DATABASE = GenesisProjectService.getTestProperties().getProperty("test_db", "genesis_project_test");
+			LOGGER.warn("Starting DatabaseConnection as test run using database: {}", DATABASE);
 		}
 	}
 	
