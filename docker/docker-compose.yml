@@ -1,6 +1,6 @@
 version: '2'
 services:
-  note_book_service:
+  genesis_project_service:
     build: .
     ports:
       - "${TOMCAT_EXTERNAL_PORT}:8080"

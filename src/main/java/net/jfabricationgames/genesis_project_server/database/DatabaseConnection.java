@@ -92,10 +92,8 @@ public class DatabaseConnection {
 	
 	/**
 	 * Load the password from the properties
-	 * 
-	 * @throws IOException
 	 */
-	private void loadConfig() throws IOException {
+	private void loadConfig() throws IOException, SQLException {
 		ClassLoader loader = Thread.currentThread().getContextClassLoader();
 		Properties databaseConfigProperties = new Properties();
 		try (InputStream resourceStream = loader.getResourceAsStream(DATABASE_CONFIG_RESOURCE_FILE)) {
@@ -120,7 +118,23 @@ public class DatabaseConnection {
 			//use a test database that is deleted before use to create a new testing environment
 			DATABASE = GenesisProjectService.getTestProperties().getProperty("test_db", "genesis_project_test");
 			LOGGER.warn("Starting DatabaseConnection as test run using database: {}", DATABASE);
+			dropTestDatabase();
 		}
+	}
+	
+	private void dropTestDatabase() throws SQLException {
+		LOGGER.info("dropping the test database: {}", getDATABASE());
+		//drop the test database before a test to create a new testing environment
+		try (Connection connection = getDataSourceWithoutDatabase().getConnection()) {
+			String query = "DROP DATABASE " + getDATABASE();
+			//type is UPDATE or QUERY: create a prepared statement without returning the generated keys
+			try (PreparedStatement statement = connection.prepareStatement(query)) {
+				if (!statement.execute()) {
+					throw new SQLException("Deleting the database " + getDATABASE() + "failed");
+				}
+			}
+		}
+		LOGGER.info("test database was dropped successfully");
 	}
 	
 	private void createDatabaseResourcesIfNotExists() throws SQLException {

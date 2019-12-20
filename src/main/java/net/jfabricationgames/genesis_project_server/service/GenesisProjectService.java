@@ -48,6 +48,7 @@ public class GenesisProjectService {
 	
 	private static void loadTestConfig() throws IOException {
 		ClassLoader loader = Thread.currentThread().getContextClassLoader();
+		testProperties = new Properties();
 		try (InputStream resourceStream = loader.getResourceAsStream(TEST_CONFIG_RESOURCE_FILE)) {
 			testProperties.load(resourceStream);
 		}
