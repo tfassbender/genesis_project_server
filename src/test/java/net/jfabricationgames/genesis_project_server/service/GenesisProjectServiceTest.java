@@ -16,7 +16,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import net.jfabricationgames.genesis_project_server.user.Login;
@@ -47,16 +46,20 @@ class GenesisProjectServiceTest {
 	}
 	
 	@SuppressWarnings("unused")
-	private void printResponse(Response response) {
+	private static void printResponse(Response response) {
 		String responseText = response.readEntity(String.class);
 		System.out.println(responseText);
 	}
 	
-	@BeforeAll
+	//@BeforeAll
 	public static void setUpUsersAndGames() throws IllegalStateException {
 		Response createUser1 = createUser(user1);
 		Response createUser2 = createUser(user2);
 		Response createGame = createGame(Arrays.asList(user1.getUsername(), user2.getUsername()));
+		
+		printResponse(createUser1);
+		printResponse(createUser2);
+		printResponse(createGame);
 		
 		if (createUser1.getStatus() != Status.OK.getStatusCode() || createUser2.getStatus() != Status.OK.getStatusCode()) {
 			throw new IllegalStateException("users couldn't be created");
@@ -107,7 +110,7 @@ class GenesisProjectServiceTest {
 		String requestType = "GET";
 		
 		Response response = sendRequest(resource, requestType, null);
-		//printResponse(response);
+		printResponse(response);
 		assertEquals(Status.OK.getStatusCode(), response.getStatus());
 		assertFalse(response.readEntity(String.class).toLowerCase().contains("error"));
 	}

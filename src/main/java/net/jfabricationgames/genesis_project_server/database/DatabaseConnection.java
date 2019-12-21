@@ -119,8 +119,29 @@ public class DatabaseConnection {
 			//use a test database that is deleted before use to create a new testing environment
 			DATABASE = GenesisProjectService.getTestProperties().getProperty("test_db", "genesis_project_test");
 			LOGGER.warn("Starting DatabaseConnection as test run using database: {}", DATABASE);
+		}
+		
+		//grand the permissions to create and drop the database
+		grandAllPriviledgesOnDatabase();
+		
+		if (GenesisProjectService.isTestRun()) {
+			//drop the test database before use to ensure a clean test environment
 			dropTestDatabase();
 		}
+	}
+	
+	private void grandAllPriviledgesOnDatabase() throws SQLException {
+		LOGGER.warn("granting all priviledges on the current database: {}", DATABASE);
+		String query = "GRANT ALL ON " + DATABASE + ".* TO " + USER;
+		try (Connection connection = getDataSourceWithoutDatabase().getConnection()) {
+			try (PreparedStatement statement = connection.prepareStatement(query)) {
+				LOGGER.debug("executing query: {}", query);
+				if (!statement.execute()) {
+					throw new SQLException("Granting permission on database " + getDATABASE() + " failed");
+				}
+			}
+		}
+		LOGGER.info("granting permission on database {} for user {} was successful", DATABASE, USER);
 	}
 	
 	private void dropTestDatabase() throws SQLException {
@@ -128,10 +149,9 @@ public class DatabaseConnection {
 		//drop the test database before a test to create a new testing environment
 		try (Connection connection = getDataSourceWithoutDatabase().getConnection()) {
 			String query = "DROP DATABASE " + getDATABASE();
-			//type is UPDATE or QUERY: create a prepared statement without returning the generated keys
 			try (PreparedStatement statement = connection.prepareStatement(query)) {
 				if (!statement.execute()) {
-					throw new SQLException("Deleting the database " + getDATABASE() + "failed");
+					throw new SQLException("Deleting the database " + getDATABASE() + " failed");
 				}
 			}
 		}
@@ -141,9 +161,13 @@ public class DatabaseConnection {
 	private void createDatabaseResourcesIfNotExists() throws SQLException {
 		String query;
 		try {
-			File databaseBuild = new File(DATABASE_BUILD_FILE);
+			//load the database script as a resource
+			ClassLoader loader = Thread.currentThread().getContextClassLoader();
+			String filename = loader.getResource(DATABASE_BUILD_FILE).getFile();
+			File databaseBuild = new File(filename);
 			query = Files.readAllLines(databaseBuild.toPath()).stream().collect(Collectors.joining("\n"));
-			query.replaceAll(DATABASE_NAME_REPLACEMENT, DATABASE);
+			//replace the database name with the name of the current database
+			query = query.replaceAll(DATABASE_NAME_REPLACEMENT, DATABASE);
 		}
 		catch (IOException ioe) {
 			throw new SQLException("query couldn't be loaded", ioe);

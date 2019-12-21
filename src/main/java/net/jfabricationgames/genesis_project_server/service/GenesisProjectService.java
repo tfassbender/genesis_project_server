@@ -58,6 +58,9 @@ public class GenesisProjectService {
 		else if (isTestRun()) {
 			LOGGER.warn(">>>> GenesisProjectServer started as test run");
 		}
+		else {
+			LOGGER.info(">>>> GenesisProjectServer started as productive run");
+		}
 	}
 	
 	/**
@@ -448,6 +451,8 @@ public class GenesisProjectService {
 		return testProperties;
 	}
 	public static boolean isTestRun() {
-		return Boolean.parseBoolean(testProperties.getProperty("test"));
+		String testProperty = testProperties.getProperty("test");
+		LOGGER.debug("test property loaded from properties file: {}", testProperty);
+		return Boolean.parseBoolean(testProperty);
 	}
 }
