@@ -43,6 +43,7 @@ public class DatabaseConnection {
 	 */
 	public static final String URL = "jdbc:mysql://mysql?useSSL=false";
 	public static final String DATABASE_CONFIG_RESOURCE_FILE = "config/database.properties";
+	public static final String DATABASE_NAME_REPLACEMENT = "<<DATABASE_NAME>>";
 	
 	public static final String TABLE_GAMES = "games";
 	public static final String TABLE_MOVES = "moves";
@@ -142,6 +143,7 @@ public class DatabaseConnection {
 		try {
 			File databaseBuild = new File(DATABASE_BUILD_FILE);
 			query = Files.readAllLines(databaseBuild.toPath()).stream().collect(Collectors.joining("\n"));
+			query.replaceAll(DATABASE_NAME_REPLACEMENT, DATABASE);
 		}
 		catch (IOException ioe) {
 			throw new SQLException("query couldn't be loaded", ioe);
@@ -151,7 +153,7 @@ public class DatabaseConnection {
 		try (Connection connection = dataSource.getConnection()) {
 			try (Statement statement = connection.createStatement()) {
 				connection.setAutoCommit(autoCommit);
-				LOGGER.info("Creating database resources (if not exists); sending query: " + query);
+				LOGGER.info("Creating database resources (if not exists); sending query:\n" + query);
 				statement.execute(query);
 				
 				connection.commit();
