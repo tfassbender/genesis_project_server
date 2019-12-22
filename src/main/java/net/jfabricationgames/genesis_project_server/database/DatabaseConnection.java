@@ -121,37 +121,27 @@ public class DatabaseConnection {
 			LOGGER.warn("Starting DatabaseConnection as test run using database: {}", DATABASE);
 		}
 		
-		//grand the permissions to create and drop the database
-		grandAllPriviledgesOnDatabase();
-		
 		if (GenesisProjectService.isTestRun()) {
 			//drop the test database before use to ensure a clean test environment
 			dropTestDatabase();
 		}
 	}
 	
-	private void grandAllPriviledgesOnDatabase() throws SQLException {
-		LOGGER.warn("granting all priviledges on the current database: {}", DATABASE);
-		String query = "GRANT ALL ON " + DATABASE + ".* TO " + USER;
-		try (Connection connection = getDataSourceWithoutDatabase().getConnection()) {
-			try (PreparedStatement statement = connection.prepareStatement(query)) {
-				LOGGER.debug("executing query: {}", query);
-				if (!statement.execute()) {
-					throw new SQLException("Granting permission on database " + getDATABASE() + " failed");
-				}
-			}
-		}
-		LOGGER.info("granting permission on database {} for user {} was successful", DATABASE, USER);
-	}
-	
 	private void dropTestDatabase() throws SQLException {
+		final String databaseNotExistingMessage = "database doesn't exist";
 		LOGGER.info("dropping the test database: {}", getDATABASE());
 		//drop the test database before a test to create a new testing environment
 		try (Connection connection = getDataSourceWithoutDatabase().getConnection()) {
 			String query = "DROP DATABASE " + getDATABASE();
 			try (PreparedStatement statement = connection.prepareStatement(query)) {
-				if (!statement.execute()) {
-					throw new SQLException("Deleting the database " + getDATABASE() + " failed");
+				try {
+					statement.execute();
+				}
+				catch (SQLException sqle) {
+					//ignore the exception if it just says that the database doesn't exist (because that's just want we want here)
+					if (!sqle.getMessage().toLowerCase().contains(databaseNotExistingMessage)) {
+						throw sqle;
+					}
 				}
 			}
 		}
@@ -206,6 +196,8 @@ public class DatabaseConnection {
 			//enable public key retrieval because I want to get the keys of the inserted data 
 			//(which seems to cause problems when using useSSL=false in the url)
 			dataSource.setAllowPublicKeyRetrieval(true);
+			//enable multiple queries in one statement
+			dataSource.setAllowMultiQueries(true);
 		}
 		catch (SQLException sqle) {
 			sqle.printStackTrace();
