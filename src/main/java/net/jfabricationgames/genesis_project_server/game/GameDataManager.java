@@ -19,6 +19,8 @@ public class GameDataManager {
 	
 	private String game;
 	private int id;
+	private boolean userExisting;
+	private boolean gameExisting;
 	
 	/**
 	 * Update a game in the database.
@@ -84,6 +86,16 @@ public class GameDataManager {
 	 * @return The ID of the game in the database.
 	 */
 	public int createGame(List<String> players) throws GameDataException {
+		//check whether all players are existing in the database
+		boolean allUsersExisting = true;
+		for (String player : players) {
+			allUsersExisting &= isUserExisting(player);
+		}
+		
+		if (!allUsersExisting) {
+			throw new GameDataException("At least one of the players doesn't exist in the database", Cause.NOT_FOUND);
+		}
+		
 		String queryCreateGame = "INSERT INTO " + DatabaseConnection.getTable(DatabaseConnection.TABLE_GAMES)
 				+ " (id, active, started, last_played, data) VALUES (0, 1, ?, ?, '')";
 		
@@ -143,6 +155,13 @@ public class GameDataManager {
 	 *        The move in JSON representation.
 	 */
 	public void setMove(int gameId, String username, String move) throws GameDataException {
+		if (!isUserExisting(username)) {
+			throw new GameDataException("the user " + username + " doesn't exist in the database", Cause.NOT_FOUND);
+		}
+		if (!isGameExisting(gameId)) {
+			throw new GameDataException("a game with the id " + gameId + " doesn't exist in the database", Cause.NOT_FOUND);
+		}
+		
 		//get the last move of the game to find the number of the next move
 		MoveList moveList = listMoves(gameId, username, 1);
 		int num = 1;
@@ -154,7 +173,7 @@ public class GameDataManager {
 		
 		String query = "INSERT INTO " + DatabaseConnection.getTable(DatabaseConnection.TABLE_MOVES)
 				+ " (user_id, game_id, move, num) VALUES ((SELECT u.id FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS)
-				+ "u WHERE u.username = ?), ?, ?, ?)";
+				+ " u WHERE u.username = ?), ?, ?, ?)";
 		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {
 			ps.setString(1, username);
 			ps.setInt(2, gameId);
@@ -345,5 +364,49 @@ public class GameDataManager {
 		}
 		
 		return sb.toString();
+	}
+	
+	/**
+	 * Test whether a user with the given username exists in the database.
+	 */
+	private boolean isUserExisting(String username) throws GameDataException {
+		String query = "SELECT id FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS) + " WHERE username = ?";
+		
+		userExisting = false;
+		
+		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {
+			ps.setString(1, username);
+		};
+		CheckedSqlConsumer<ResultSet> resultConsumer = resultSet -> {
+			if (resultSet.next()) {
+				userExisting = true;
+			}
+		};
+		
+		DatabaseConnection.executeCheckedSQL(query, SqlExecutionType.QUERY, variableSetter, resultConsumer);
+		
+		return userExisting;
+	}
+	
+	/**
+	 * Test whether a user with the given username exists in the database.
+	 */
+	private boolean isGameExisting(int gameId) throws GameDataException {
+		String query = "SELECT id FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_GAMES) + " WHERE id = ?";
+		
+		gameExisting = false;
+		
+		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {
+			ps.setInt(1, gameId);
+		};
+		CheckedSqlConsumer<ResultSet> resultConsumer = resultSet -> {
+			if (resultSet.next()) {
+				gameExisting = true;
+			}
+		};
+		
+		DatabaseConnection.executeCheckedSQL(query, SqlExecutionType.QUERY, variableSetter, resultConsumer);
+		
+		return gameExisting;
 	}
 }
