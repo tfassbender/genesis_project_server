@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
@@ -57,10 +58,10 @@ public class DatabaseConnection {
 	 * <p>
 	 * Add the same password in the environment variables of the docker-compose.ylm
 	 */
-	private static String USER_PASSWORD;
-	private static String USER;
-	private static String DATABASE;
-	private static String DATABASE_BUILD_FILE;
+	private String USER_PASSWORD;
+	private String USER;
+	private String DATABASE;
+	private String DATABASE_BUILD_FILE;
 	
 	public static final String VERSION = "1.0.0";
 	
@@ -72,6 +73,16 @@ public class DatabaseConnection {
 		LOGGER.info("Creating DatabaseConnection; current version is " + VERSION);
 		try {
 			loadConfig();
+			
+			if (GenesisProjectService.isTestRun()) {
+				//drop the test database before use to ensure a clean test environment
+				dropTestDatabase();
+			}
+			
+			//test the privileges for testing purposes
+			testPrivileges(USER);
+			testPrivileges(null);
+			
 			createDatabaseResourcesIfNotExists();
 		}
 		catch (SQLException sqle) {
@@ -111,20 +122,43 @@ public class DatabaseConnection {
 		if (USER == null || USER.equals("")) {
 			throw new IOException("No user could be loaded from properties.");
 		}
-		if (DATABASE == null || DATABASE.equals("")) {
-			throw new IOException("No database could be loaded from properties.");
-		}
 		
 		if (GenesisProjectService.isTestRun()) {
 			//use a test database that is deleted before use to create a new testing environment
 			DATABASE = GenesisProjectService.getTestProperties().getProperty("test_db", "genesis_project_test");
 			LOGGER.warn("Starting DatabaseConnection as test run using database: {}", DATABASE);
 		}
-		
-		if (GenesisProjectService.isTestRun()) {
-			//drop the test database before use to ensure a clean test environment
-			dropTestDatabase();
+		if (DATABASE == null || DATABASE.equals("")) {
+			throw new IOException("No database could be loaded from properties.");
 		}
+		
+		LOGGER.info("configuration loaded: [USER: {}, DATABASE: {}, USER_PASSWORD loaded: {}]", USER, DATABASE, USER_PASSWORD != null);
+	}
+	
+	private void testPrivileges(String user) throws SQLException {
+		LOGGER.info("testing privileges for user: {}", user);
+		//drop the test database before a test to create a new testing environment
+		try (Connection connection = getDataSourceWithoutDatabase().getConnection()) {
+			String query;
+			if (user != null) {
+				query = "SHOW GRANTS FOR " + user + ";";
+			}
+			else {
+				query = "SHOW GRANTS;";
+			}
+			try (PreparedStatement statement = connection.prepareStatement(query)) {
+				//log the result set and the content
+				ResultSet result = statement.executeQuery();
+				ResultSetMetaData meta = result.getMetaData();
+				while (result.next()) {
+					for (int i = 1; i <= meta.getColumnCount(); i++) {
+						String privileges = result.getString(i);
+						LOGGER.info("privileges on database for user {}: {}", user, privileges);
+					}
+				}
+			}
+		}
+		LOGGER.info("test database was dropped successfully");
 	}
 	
 	private void dropTestDatabase() throws SQLException {
@@ -338,14 +372,24 @@ public class DatabaseConnection {
 		}
 	}
 	
-	public static String getTable(String table) {
-		return getDATABASE() + "." + table;
+	/**
+	 * Get the name of the table with a leading database name.
+	 */
+	public static String getTable(String table) throws GameDataException {
+		try {
+			//execute get instance first to load the configuration
+			DatabaseConnection dbConnection = getInstance();
+			return dbConnection.getDATABASE() + "." + table;
+		}
+		catch (SQLException sqle) {
+			throw new GameDataException("An SQLException occured while trying to get a DatabaseConnection instance", sqle, Cause.SQL_EXCEPTION);
+		}
 	}
 	
-	public static String getUSER() {
+	public String getUSER() {
 		return USER;
 	}
-	public static String getDATABASE() {
+	public String getDATABASE() {
 		return DATABASE;
 	}
 }

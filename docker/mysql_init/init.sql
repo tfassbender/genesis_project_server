@@ -3,3 +3,4 @@
 CREATE DATABASE `genesis_project_test`;
 GRANT ALL ON `genesis_project`.* TO `genesis_project`@`%`;
 GRANT ALL ON `genesis_project_test`.* TO `genesis_project`@`%`;
+FLUSH PRIVILEGES;

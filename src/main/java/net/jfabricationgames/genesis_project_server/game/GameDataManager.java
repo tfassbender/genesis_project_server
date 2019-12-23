@@ -109,7 +109,7 @@ public class GameDataManager {
 		
 		String queryCreatePlayers = "INSERT INTO " + DatabaseConnection.getTable(DatabaseConnection.TABLE_PLAYERS)
 				+ " (user_id, game_id) VALUES ((SELECT id FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS)
-				+ " u WHERE u.username = '?'), ?)";
+				+ " u WHERE u.username = ?), ?)";
 		//add all players that participate in the game
 		int affectedRows = 0;
 		for (String player : players) {
@@ -223,16 +223,23 @@ public class GameDataManager {
 		gameList.setLastPlayed(lastPlayed);
 		return gameList;
 	}
-	protected String buildGameListQuery(boolean complete, String username) {
+	protected String buildGameListQuery(boolean complete, String username) throws GameDataException {
+		String tableGames = DatabaseConnection.getTable(DatabaseConnection.TABLE_GAMES);
+		String tablePlayers = DatabaseConnection.getTable(DatabaseConnection.TABLE_PLAYERS);
+		String tableUsers = DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS);
+		return buildGameListQuery(complete, username, tableGames, tablePlayers, tableUsers);
+	}
+	protected String buildGameListQuery(boolean complete, String username, String tableGames, String tablePlayers, String tableUsers)
+			throws GameDataException {
 		boolean allUsers = username.equals("-");
 		StringBuilder sb = new StringBuilder("SELECT g.id, g.started, g.last_played");
 		if (complete) {
 			sb.append(", g.data");
 		}
-		sb.append(" FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_GAMES) + " g");
+		sb.append(" FROM " + tableGames + " g");
 		if (!allUsers) {
-			sb.append(" JOIN " + DatabaseConnection.getTable(DatabaseConnection.TABLE_PLAYERS) + " p ON g.id = p.game_id");
-			sb.append(" JOIN " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS) + " u ON u.id = p.user_id");
+			sb.append(" JOIN " + tablePlayers + " p ON g.id = p.game_id");
+			sb.append(" JOIN " + tableUsers + " u ON u.id = p.user_id");
 			sb.append(" WHERE u.username = ?");
 		}
 		return sb.toString();
@@ -280,9 +287,9 @@ public class GameDataManager {
 		CheckedSqlConsumer<ResultSet> resultConsumer = resultSet -> {
 			//iterate over the result and add everything into the local maps
 			if (resultSet.next()) {
-				int id = resultSet.getInt(1);
-				int moveNum = resultSet.getInt(2);
-				String move = resultSet.getString(3);
+				//int id = resultSet.getInt(1);
+				int moveNum = resultSet.getInt(1);
+				String move = resultSet.getString(2);
 				
 				//add the results to the maps
 				moves.put(id, move);
@@ -296,15 +303,21 @@ public class GameDataManager {
 		//create a move list from the results
 		MoveList moveList = new MoveList();
 		moveList.setMoves(moves);
-		moveList.setIdToNum(idToNum);
+		//moveList.setIdToNum(idToNum);
 		return moveList;
 	}
-	protected String buildMoveListQuery(boolean allGames, boolean allUsers, boolean allMoves) {
-		StringBuilder sb = new StringBuilder("SELECT m.id, m.num, m.move FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_MOVES) + " m");
+	
+	public String buildMoveListQuery(boolean allGames, boolean allUsers, boolean allMoves) throws GameDataException {
+		String tableMoves = DatabaseConnection.getTable(DatabaseConnection.TABLE_MOVES);
+		String tableUsers = DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS);
+		return buildMoveListQuery(allGames, allUsers, allMoves, tableMoves, tableUsers);
+	}
+	protected String buildMoveListQuery(boolean allGames, boolean allUsers, boolean allMoves, String tableMoves, String tableUsers) {
+		StringBuilder sb = new StringBuilder("SELECT m.num, m.move FROM " + tableMoves + " m");
 		
 		if (!allUsers) {
 			//if not all users the username has to be found (by joining)
-			sb.append(" JOIN " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS) + " u ON u.id = m.user_id");
+			sb.append(" JOIN " + tableUsers + " u ON u.id = m.user_id");
 		}
 		sb.append(" WHERE");
 		if (allUsers && allGames) {

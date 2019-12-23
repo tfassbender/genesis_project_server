@@ -16,6 +16,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import net.jfabricationgames.genesis_project_server.user.Login;
@@ -51,15 +52,15 @@ class GenesisProjectServiceTest {
 		System.out.println(responseText);
 	}
 	
-	//@BeforeAll
+	@BeforeAll
 	public static void setUpUsersAndGames() throws IllegalStateException {
 		Response createUser1 = createUser(user1);
 		Response createUser2 = createUser(user2);
 		Response createGame = createGame(Arrays.asList(user1.getUsername(), user2.getUsername()));
 		
-		printResponse(createUser1);
-		printResponse(createUser2);
-		printResponse(createGame);
+		//printResponse(createUser1);
+		//printResponse(createUser2);
+		//printResponse(createGame);
 		
 		if (createUser1.getStatus() != Status.OK.getStatusCode() || createUser2.getStatus() != Status.OK.getStatusCode()) {
 			throw new IllegalStateException("users couldn't be created");
@@ -110,7 +111,7 @@ class GenesisProjectServiceTest {
 		String requestType = "GET";
 		
 		Response response = sendRequest(resource, requestType, null);
-		printResponse(response);
+		//printResponse(response);
 		assertEquals(Status.OK.getStatusCode(), response.getStatus());
 		assertFalse(response.readEntity(String.class).toLowerCase().contains("error"));
 	}
@@ -182,7 +183,7 @@ class GenesisProjectServiceTest {
 	}
 	
 	@Test
-	public void testSetGame_wrongGameId_notFound() {
+	public void testSetMove_wrongGameId_notFound() {
 		String resource = "set_move/512/" + user1.getUsername() + "/a_move_text";
 		String requestType = "GET";
 		
@@ -192,7 +193,7 @@ class GenesisProjectServiceTest {
 	}
 	
 	@Test
-	public void testSetGame_wrongPlayerId_notFound() {
+	public void testSetMove_wrongPlayerId_notFound() {
 		String resource = "set_move/" + game1Id + "/a_not_existing_username/a_move_text";
 		String requestType = "GET";
 		
@@ -202,7 +203,7 @@ class GenesisProjectServiceTest {
 	}
 	
 	@Test
-	public void testSetGame_correctIds() {
+	public void testSetMove_correctIds() {
 		String moveText = "a_move_was_made";
 		String resource = "set_move/" + game1Id + "/" + user1.getUsername() + "/" + moveText;
 		String requestType = "GET";
