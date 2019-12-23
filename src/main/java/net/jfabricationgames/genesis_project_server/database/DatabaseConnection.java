@@ -81,7 +81,6 @@ public class DatabaseConnection {
 			
 			//test the privileges for testing purposes
 			testPrivileges(USER);
-			testPrivileges(null);
 			
 			createDatabaseResourcesIfNotExists();
 		}
@@ -135,6 +134,9 @@ public class DatabaseConnection {
 		LOGGER.info("configuration loaded: [USER: {}, DATABASE: {}, USER_PASSWORD loaded: {}]", USER, DATABASE, USER_PASSWORD != null);
 	}
 	
+	/**
+	 * Test which privileges the current user (or a null user) has on the database.
+	 */
 	private void testPrivileges(String user) throws SQLException {
 		LOGGER.info("testing privileges for user: {}", user);
 		//drop the test database before a test to create a new testing environment
@@ -159,6 +161,17 @@ public class DatabaseConnection {
 			}
 		}
 		LOGGER.info("test database was dropped successfully");
+	}
+	
+	public void resetTestDatabase() throws SQLException {
+		if (GenesisProjectService.isTestRun()) {
+			LOGGER.warn("resetting test database");
+			dropTestDatabase();
+			createDatabaseResourcesIfNotExists();
+		}
+		else {
+			throw new SQLException("The current environment is no test environment. Abborting reset of test database.");
+		}
 	}
 	
 	private void dropTestDatabase() throws SQLException {

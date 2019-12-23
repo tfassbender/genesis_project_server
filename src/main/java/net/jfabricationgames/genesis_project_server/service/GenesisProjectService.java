@@ -90,6 +90,7 @@ public class GenesisProjectService {
 			answer = "Database up and running";
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			answer = "Database error: " + e.getClass().getSimpleName() + ": " + e.getLocalizedMessage() + "\n" + ErrorUtil.getStackTraceAsString(e);
 		}
 		
@@ -126,6 +127,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -153,6 +155,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -188,6 +191,7 @@ public class GenesisProjectService {
 			}
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -225,6 +229,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -253,6 +258,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -285,6 +291,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -322,6 +329,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -358,6 +366,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -388,6 +397,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -421,7 +431,36 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+		}
+	}
+	
+	/**
+	 * Reset the test database to an initial state. Only works in test environments (see configuration file config/test.properties).
+	 * 
+	 * 
+	 */
+	@GET
+	@Path("reset_test_database")
+	public Response resetTestDatabase() {
+		LOGGER.debug("resetTestDatabase was called");
+		if (!isTestRun()) {
+			return Response.status(Status.FORBIDDEN).entity("The current environment is not a test environment. Resetting test database aborted")
+					.build();
+		}
+		else {
+			try {
+				//the current environment is a test environment, so try to reset it
+				DatabaseConnection dbConnection = DatabaseConnection.getInstance();
+				dbConnection.resetTestDatabase();
+				
+				return Response.status(Status.OK).build();
+			}
+			catch (Exception e) {
+				LOGGER.error("an unknown error occured: ", e);
+				return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+			}
 		}
 	}
 	

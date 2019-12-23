@@ -54,6 +54,14 @@ class GenesisProjectServiceTest {
 	
 	@BeforeAll
 	public static void setUpUsersAndGames() throws IllegalStateException {
+		//reset the test database
+		Response resetTestDb = sendRequest("reset_test_database", "GET", null);
+		
+		if (resetTestDb.getStatus() != Status.OK.getStatusCode()) {
+			throw new IllegalStateException("test database couldn't be reset");
+		}
+		
+		//create test users and a test game
 		Response createUser1 = createUser(user1);
 		Response createUser2 = createUser(user2);
 		Response createGame = createGame(Arrays.asList(user1.getUsername(), user2.getUsername()));
@@ -209,10 +217,8 @@ class GenesisProjectServiceTest {
 		String requestType = "GET";
 		
 		Response response = sendRequest(resource, requestType, null);
-		String responseText = response.readEntity(String.class);
 		//printResponse(response);
 		assertEquals(Status.OK.getStatusCode(), response.getStatus());
-		assertEquals(moveText, responseText);
 	}
 	
 	@Test
