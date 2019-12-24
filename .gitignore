@@ -3,3 +3,5 @@
 .settings/
 log/
 target/
+src/main/resources/config/database.properties
+docker/build_and_run.sh

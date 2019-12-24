@@ -1,0 +1,21 @@
+version: '2'
+services:
+  genesis_project_service:
+    build: .
+    ports:
+      - "${TOMCAT_EXTERNAL_PORT}:8080"
+    volumes:
+      - ./logs:/usr/local/tomcat/log
+
+  mysql:
+    image: hypriot/rpi-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: '${MYSQL_DOCKER_ROOT_PASSWORD}'
+      MYSQL_DATABASE: '${MYSQL_DOCKER_DATABASE}'
+      MYSQL_USER: '${MYSQL_DOCKER_USER}'
+      MYSQL_PASSWORD: '${MYSQL_DOCKER_USER_PASSWORD}'
+    ports:
+      - "3307:3306"
+    volumes:
+      - ~/mysql_docker_volumes/${MYSQL_DOCKER_VOLUME}:/var/lib/mysql
+      - ./mysql_init:/docker-entrypoint-initdb.d/
