@@ -12,11 +12,9 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import net.jfabricationgames.genesis_project_server.database.DatabaseConnection;
-
 public class ConfigurationDataManager {
 	
-	private static final Logger LOGGER = LogManager.getLogger(DatabaseConnection.class);
+	private static final Logger LOGGER = LogManager.getLogger(ConfigurationDataManager.class);
 	
 	private static final String CONFIG_RESOURCE_FILE = "config/configs.properties";
 	
@@ -51,7 +49,7 @@ public class ConfigurationDataManager {
 			LOGGER.debug("keyString: " + key.toString() + "   configFile: " + configFile);
 			
 			String loadedConfig = loadConfigFileToString(configFile);
-			LOGGER.debug("loaded config: " + loadedConfig.substring(0, Math.min(200, loadedConfig.length())) + "...   configs: " + configs);
+			//LOGGER.debug("loaded config: " + loadedConfig.substring(0, Math.min(200, loadedConfig.length())) + "...   configs: " + configs);
 			configs.put(keyString, loadedConfig);
 		}
 	}

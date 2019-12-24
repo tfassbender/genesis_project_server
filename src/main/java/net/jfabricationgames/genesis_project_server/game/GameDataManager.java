@@ -201,7 +201,7 @@ public class GameDataManager {
 	 * @return A {@link GameList} that contains the games.
 	 */
 	public GameList listGames(boolean complete, String username) throws GameDataException {
-		boolean allUsers = username.equals("-");
+		boolean allUsers = username == null || username.equals("") || username.equals("-");
 		//build the query (depending on the parameters)
 		String query = buildGameListQuery(complete, username);
 		
@@ -216,7 +216,7 @@ public class GameDataManager {
 		};
 		CheckedSqlConsumer<ResultSet> resultConsumer = resultSet -> {
 			//iterate over the result and add everything into the local maps
-			if (resultSet.next()) {
+			while (resultSet.next()) {
 				int id = resultSet.getInt(1);
 				LocalDate startedDate = resultSet.getDate(2).toLocalDate();
 				LocalDate lastPlayedDate = resultSet.getDate(3).toLocalDate();
@@ -280,7 +280,7 @@ public class GameDataManager {
 	 */
 	public MoveList listMoves(int gameId, String username, int num) throws GameDataException {
 		boolean allGames = gameId == -1;
-		boolean allUsers = username.equals("-");
+		boolean allUsers = username == null || username.equals("") || username.equals("-");
 		boolean allMoves = num == -1;
 		
 		String query = buildMoveListQuery(allGames, allUsers, allMoves);

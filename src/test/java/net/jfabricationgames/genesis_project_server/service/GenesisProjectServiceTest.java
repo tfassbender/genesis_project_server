@@ -2,9 +2,10 @@ package net.jfabricationgames.genesis_project_server.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -19,13 +20,20 @@ import javax.ws.rs.core.Response.Status;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import net.jfabricationgames.genesis_project_server.game.GameList;
 import net.jfabricationgames.genesis_project_server.user.Login;
 
 class GenesisProjectServiceTest {
 	
 	private static final Login user1 = new Login("Player1", "unique_password_8621321854");
 	private static final Login user2 = new Login("Player2", "unique_password_75231687");
+	private static final Login user3 = new Login("Player3", "unique_password_2348942316");
 	private static int game1Id = -1;
+	private static int game2Id = -1;
+	private static int game3Id = -1;
 	
 	private static String getServerUrl() {
 		return "http://jfabricationgames.ddns.net:5715/genesis_project_server/genesis_project/genesis_project/";
@@ -64,20 +72,26 @@ class GenesisProjectServiceTest {
 		//create test users and a test game
 		Response createUser1 = createUser(user1);
 		Response createUser2 = createUser(user2);
-		Response createGame = createGame(Arrays.asList(user1.getUsername(), user2.getUsername()));
+		Response createUser3 = createUser(user3);
+		Response createGame1 = createGame(Arrays.asList(user1.getUsername(), user2.getUsername()));
+		Response createGame2 = createGame(Arrays.asList(user1.getUsername(), user3.getUsername()));
+		Response createGame3 = createGame(Arrays.asList(user1.getUsername(), user2.getUsername(), user3.getUsername()));
 		
 		//printResponse(createUser1);
 		//printResponse(createUser2);
 		//printResponse(createGame);
 		
-		if (createUser1.getStatus() != Status.OK.getStatusCode() || createUser2.getStatus() != Status.OK.getStatusCode()) {
+		if (createUser1.getStatus() != Status.OK.getStatusCode() || createUser2.getStatus() != Status.OK.getStatusCode()
+				|| createUser3.getStatus() != Status.OK.getStatusCode()) {
 			throw new IllegalStateException("users couldn't be created");
 		}
-		if (createGame.getStatus() != Status.OK.getStatusCode()) {
+		if (createGame1.getStatus() != Status.OK.getStatusCode()) {
 			throw new IllegalStateException("game couldn't be created");
 		}
-		game1Id = createGame.readEntity(Integer.class);
-		if (game1Id < 0) {
+		game1Id = createGame1.readEntity(Integer.class);
+		game2Id = createGame2.readEntity(Integer.class);
+		game3Id = createGame3.readEntity(Integer.class);
+		if (game1Id < 0 || game2Id < 0 || game3Id < 0) {
 			throw new IllegalStateException("game id is a negative number");
 		}
 	}
@@ -348,7 +362,6 @@ class GenesisProjectServiceTest {
 	
 	@Test
 	public void testVerifyUser_wrongPassword() {
-		//first create the user so it exists and can be updated
 		Login login = new Login("unique_username_546789456", "unique_password_78962312");
 		Response response = createUser(login);
 		//printResponse(response);
@@ -364,7 +377,6 @@ class GenesisProjectServiceTest {
 	
 	@Test
 	public void testVerifyUser_unknownUser() {
-		//first create the user so it exists and can be updated
 		String resource = "verify_user";
 		String requestType = "POST";
 		Login login = new Login("a_not_existing_username_8642363", "password");
@@ -376,22 +388,101 @@ class GenesisProjectServiceTest {
 	
 	@Test
 	public void testListGames_complete_allUsers() {
-		//TODO
-		fail("not yet implemented");
+		String resource = "list_games/true/-";
+		String requestType = "GET";
+		
+		//update game 1 first to check the content
+		String gameContent = "game_unique_content_8943218642";
+		Response updateGame = sendRequest("update_game/" + game1Id + "/" + gameContent, "GET", null);
+		
+		Response response = sendRequest(resource, requestType, null);
+		String gameListText = response.readEntity(String.class);
+		GameList gameList = getGameList(gameListText);
+		
+		assertEquals(Status.OK.getStatusCode(), updateGame.getStatus());
+		assertEquals(Status.OK.getStatusCode(), response.getStatus());
+		
+		assertTrue(gameList.getGames().keySet().contains(game1Id));
+		assertTrue(gameList.getGames().keySet().contains(game2Id));
+		assertTrue(gameList.getGames().keySet().contains(game3Id));
+		assertEquals(gameContent, gameList.getGames().get(game1Id));
 	}
 	@Test
 	public void testListGames_complete_specificUser() {
-		//TODO
-		fail("not yet implemented");
+		String resource = "list_games/true/" + user2.getUsername();
+		String requestType = "GET";
+		
+		//update game 1 first to check the content
+		String gameContent = "game_unique_content_34984651563857448";
+		Response updateGame = sendRequest("update_game/" + game1Id + "/" + gameContent, "GET", null);
+		
+		Response response = sendRequest(resource, requestType, null);
+		String gameListText = response.readEntity(String.class);
+		GameList gameList = getGameList(gameListText);
+		
+		assertEquals(Status.OK.getStatusCode(), updateGame.getStatus());
+		assertEquals(Status.OK.getStatusCode(), response.getStatus());
+		
+		assertTrue(gameList.getGames().keySet().contains(game1Id));
+		assertFalse(gameList.getGames().keySet().contains(game2Id));
+		assertTrue(gameList.getGames().keySet().contains(game3Id));
+		assertEquals(gameContent, gameList.getGames().get(game1Id));
 	}
 	@Test
 	public void testListGames_incomplete_allUsers() {
-		//TODO
-		fail("not yet implemented");
+		String resource = "list_games/false/-";
+		String requestType = "GET";
+		
+		//update game 1 first to check the content
+		String gameContent = "game_unique_content_786123089431";
+		Response updateGame = sendRequest("update_game/" + game1Id + "/" + gameContent, "GET", null);
+		
+		Response response = sendRequest(resource, requestType, null);
+		String gameListText = response.readEntity(String.class);
+		GameList gameList = getGameList(gameListText);
+		
+		assertEquals(Status.OK.getStatusCode(), updateGame.getStatus());
+		assertEquals(Status.OK.getStatusCode(), response.getStatus());
+		
+		assertTrue(gameList.getGames().keySet().contains(game1Id));
+		assertTrue(gameList.getGames().keySet().contains(game2Id));
+		assertTrue(gameList.getGames().keySet().contains(game3Id));
+		assertNull(gameList.getGames().get(game1Id));
 	}
 	@Test
 	public void testListGames_incomplete_specificUser() {
-		//TODO
-		fail("not yet implemented");
+		String resource = "list_games/false/" + user2.getUsername();
+		String requestType = "GET";
+		
+		//update game 1 first to check the content
+		String gameContent = "game_unique_content_1896432185160";
+		Response updateGame = sendRequest("update_game/" + game1Id + "/" + gameContent, "GET", null);
+		
+		Response response = sendRequest(resource, requestType, null);
+		String gameListText = response.readEntity(String.class);
+		GameList gameList = getGameList(gameListText);
+		
+		assertEquals(Status.OK.getStatusCode(), updateGame.getStatus());
+		assertEquals(Status.OK.getStatusCode(), response.getStatus());
+		
+		assertTrue(gameList.getGames().keySet().contains(game1Id));
+		assertFalse(gameList.getGames().keySet().contains(game2Id));
+		assertTrue(gameList.getGames().keySet().contains(game3Id));
+		assertNull(gameList.getGames().get(game1Id));
+	}
+	
+	private GameList getGameList(String gameListText) {
+		ObjectMapper mapper = new ObjectMapper();
+		//register the module to parse java-8 LocalDate
+		mapper.registerModule(new JavaTimeModule());
+		try {
+			//"manually" parse JSON to Object
+			GameList resp = mapper.readValue(gameListText, GameList.class);
+			return resp;
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			throw new IllegalStateException("The response could not be read or parsed: " + gameListText, e);
+		}
 	}
 }

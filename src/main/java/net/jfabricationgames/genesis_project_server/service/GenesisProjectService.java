@@ -18,6 +18,10 @@ import javax.ws.rs.core.Response.Status;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import net.jfabricationgames.genesis_project_server.config.ConfigurationDataManager;
 import net.jfabricationgames.genesis_project_server.database.DatabaseConnection;
 import net.jfabricationgames.genesis_project_server.exception.GameDataException;
@@ -391,7 +395,11 @@ public class GenesisProjectService {
 			GameDataManager gameDataManager = new GameDataManager();
 			GameList gameList = gameDataManager.listGames(complete, username);
 			
-			return Response.status(Status.OK).entity(gameList).build();
+			//manually parse to JSON (to register JavaTimeModule for parsing LocalDate)
+			ObjectWriter ow = new ObjectMapper().registerModule(new JavaTimeModule()).writer();
+			String gameListJson = ow.writeValueAsString(gameList);
+			
+			return Response.status(Status.OK).entity(gameListJson).build();
 		}
 		catch (GameDataException gde) {
 			return handleGameDataException(gde);
