@@ -1,0 +1,1 @@
+scp -r docker/* target/genesis_project_server.war src/main/resources/config/ pi@192.168.178.98:/home/pi/genesis_project/

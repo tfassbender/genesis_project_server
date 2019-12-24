@@ -11,7 +11,7 @@ public class MoveList {
 	/**
 	 * Maps the id of the moves to the number of the moves;
 	 */
-	private Map<Integer, Integer> idToNum;
+	//private Map<Integer, Integer> idToNum;
 	
 	public MoveList() {
 		
@@ -24,10 +24,10 @@ public class MoveList {
 		this.moves = moves;
 	}
 	
-	public Map<Integer, Integer> getIdToNum() {
+	/*public Map<Integer, Integer> getIdToNum() {
 		return idToNum;
 	}
 	public void setIdToNum(Map<Integer, Integer> idToNum) {
 		this.idToNum = idToNum;
-	}
+	}*/
 }

@@ -19,6 +19,8 @@ public class GameDataManager {
 	
 	private String game;
 	private int id;
+	private boolean userExisting;
+	private boolean gameExisting;
 	
 	/**
 	 * Update a game in the database.
@@ -84,6 +86,16 @@ public class GameDataManager {
 	 * @return The ID of the game in the database.
 	 */
 	public int createGame(List<String> players) throws GameDataException {
+		//check whether all players are existing in the database
+		boolean allUsersExisting = true;
+		for (String player : players) {
+			allUsersExisting &= isUserExisting(player);
+		}
+		
+		if (!allUsersExisting) {
+			throw new GameDataException("At least one of the players doesn't exist in the database", Cause.NOT_FOUND);
+		}
+		
 		String queryCreateGame = "INSERT INTO " + DatabaseConnection.getTable(DatabaseConnection.TABLE_GAMES)
 				+ " (id, active, started, last_played, data) VALUES (0, 1, ?, ?, '')";
 		
@@ -109,7 +121,7 @@ public class GameDataManager {
 		
 		String queryCreatePlayers = "INSERT INTO " + DatabaseConnection.getTable(DatabaseConnection.TABLE_PLAYERS)
 				+ " (user_id, game_id) VALUES ((SELECT id FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS)
-				+ " u WHERE u.username = '?'), ?)";
+				+ " u WHERE u.username = ?), ?)";
 		//add all players that participate in the game
 		int affectedRows = 0;
 		for (String player : players) {
@@ -143,6 +155,13 @@ public class GameDataManager {
 	 *        The move in JSON representation.
 	 */
 	public void setMove(int gameId, String username, String move) throws GameDataException {
+		if (!isUserExisting(username)) {
+			throw new GameDataException("the user " + username + " doesn't exist in the database", Cause.NOT_FOUND);
+		}
+		if (!isGameExisting(gameId)) {
+			throw new GameDataException("a game with the id " + gameId + " doesn't exist in the database", Cause.NOT_FOUND);
+		}
+		
 		//get the last move of the game to find the number of the next move
 		MoveList moveList = listMoves(gameId, username, 1);
 		int num = 1;
@@ -154,7 +173,7 @@ public class GameDataManager {
 		
 		String query = "INSERT INTO " + DatabaseConnection.getTable(DatabaseConnection.TABLE_MOVES)
 				+ " (user_id, game_id, move, num) VALUES ((SELECT u.id FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS)
-				+ "u WHERE u.username = ?), ?, ?, ?)";
+				+ " u WHERE u.username = ?), ?, ?, ?)";
 		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {
 			ps.setString(1, username);
 			ps.setInt(2, gameId);
@@ -182,7 +201,7 @@ public class GameDataManager {
 	 * @return A {@link GameList} that contains the games.
 	 */
 	public GameList listGames(boolean complete, String username) throws GameDataException {
-		boolean allUsers = username.equals("-");
+		boolean allUsers = username == null || username.equals("") || username.equals("-");
 		//build the query (depending on the parameters)
 		String query = buildGameListQuery(complete, username);
 		
@@ -197,7 +216,7 @@ public class GameDataManager {
 		};
 		CheckedSqlConsumer<ResultSet> resultConsumer = resultSet -> {
 			//iterate over the result and add everything into the local maps
-			if (resultSet.next()) {
+			while (resultSet.next()) {
 				int id = resultSet.getInt(1);
 				LocalDate startedDate = resultSet.getDate(2).toLocalDate();
 				LocalDate lastPlayedDate = resultSet.getDate(3).toLocalDate();
@@ -223,16 +242,23 @@ public class GameDataManager {
 		gameList.setLastPlayed(lastPlayed);
 		return gameList;
 	}
-	protected String buildGameListQuery(boolean complete, String username) {
+	protected String buildGameListQuery(boolean complete, String username) throws GameDataException {
+		String tableGames = DatabaseConnection.getTable(DatabaseConnection.TABLE_GAMES);
+		String tablePlayers = DatabaseConnection.getTable(DatabaseConnection.TABLE_PLAYERS);
+		String tableUsers = DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS);
+		return buildGameListQuery(complete, username, tableGames, tablePlayers, tableUsers);
+	}
+	protected String buildGameListQuery(boolean complete, String username, String tableGames, String tablePlayers, String tableUsers)
+			throws GameDataException {
 		boolean allUsers = username.equals("-");
 		StringBuilder sb = new StringBuilder("SELECT g.id, g.started, g.last_played");
 		if (complete) {
 			sb.append(", g.data");
 		}
-		sb.append(" FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_GAMES) + " g");
+		sb.append(" FROM " + tableGames + " g");
 		if (!allUsers) {
-			sb.append(" JOIN " + DatabaseConnection.getTable(DatabaseConnection.TABLE_PLAYERS) + " p ON g.id = p.game_id");
-			sb.append(" JOIN " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS) + " u ON u.id = p.user_id");
+			sb.append(" JOIN " + tablePlayers + " p ON g.id = p.game_id");
+			sb.append(" JOIN " + tableUsers + " u ON u.id = p.user_id");
 			sb.append(" WHERE u.username = ?");
 		}
 		return sb.toString();
@@ -254,7 +280,7 @@ public class GameDataManager {
 	 */
 	public MoveList listMoves(int gameId, String username, int num) throws GameDataException {
 		boolean allGames = gameId == -1;
-		boolean allUsers = username.equals("-");
+		boolean allUsers = username == null || username.equals("") || username.equals("-");
 		boolean allMoves = num == -1;
 		
 		String query = buildMoveListQuery(allGames, allUsers, allMoves);
@@ -280,9 +306,9 @@ public class GameDataManager {
 		CheckedSqlConsumer<ResultSet> resultConsumer = resultSet -> {
 			//iterate over the result and add everything into the local maps
 			if (resultSet.next()) {
-				int id = resultSet.getInt(1);
-				int moveNum = resultSet.getInt(2);
-				String move = resultSet.getString(3);
+				//int id = resultSet.getInt(1);
+				int moveNum = resultSet.getInt(1);
+				String move = resultSet.getString(2);
 				
 				//add the results to the maps
 				moves.put(id, move);
@@ -296,15 +322,21 @@ public class GameDataManager {
 		//create a move list from the results
 		MoveList moveList = new MoveList();
 		moveList.setMoves(moves);
-		moveList.setIdToNum(idToNum);
+		//moveList.setIdToNum(idToNum);
 		return moveList;
 	}
-	protected String buildMoveListQuery(boolean allGames, boolean allUsers, boolean allMoves) {
-		StringBuilder sb = new StringBuilder("SELECT m.id, m.num, m.move FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_MOVES) + " m");
+	
+	public String buildMoveListQuery(boolean allGames, boolean allUsers, boolean allMoves) throws GameDataException {
+		String tableMoves = DatabaseConnection.getTable(DatabaseConnection.TABLE_MOVES);
+		String tableUsers = DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS);
+		return buildMoveListQuery(allGames, allUsers, allMoves, tableMoves, tableUsers);
+	}
+	protected String buildMoveListQuery(boolean allGames, boolean allUsers, boolean allMoves, String tableMoves, String tableUsers) {
+		StringBuilder sb = new StringBuilder("SELECT m.num, m.move FROM " + tableMoves + " m");
 		
 		if (!allUsers) {
 			//if not all users the username has to be found (by joining)
-			sb.append(" JOIN " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS) + " u ON u.id = m.user_id");
+			sb.append(" JOIN " + tableUsers + " u ON u.id = m.user_id");
 		}
 		sb.append(" WHERE");
 		if (allUsers && allGames) {
@@ -332,5 +364,49 @@ public class GameDataManager {
 		}
 		
 		return sb.toString();
+	}
+	
+	/**
+	 * Test whether a user with the given username exists in the database.
+	 */
+	private boolean isUserExisting(String username) throws GameDataException {
+		String query = "SELECT id FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS) + " WHERE username = ?";
+		
+		userExisting = false;
+		
+		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {
+			ps.setString(1, username);
+		};
+		CheckedSqlConsumer<ResultSet> resultConsumer = resultSet -> {
+			if (resultSet.next()) {
+				userExisting = true;
+			}
+		};
+		
+		DatabaseConnection.executeCheckedSQL(query, SqlExecutionType.QUERY, variableSetter, resultConsumer);
+		
+		return userExisting;
+	}
+	
+	/**
+	 * Test whether a user with the given username exists in the database.
+	 */
+	private boolean isGameExisting(int gameId) throws GameDataException {
+		String query = "SELECT id FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_GAMES) + " WHERE id = ?";
+		
+		gameExisting = false;
+		
+		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {
+			ps.setInt(1, gameId);
+		};
+		CheckedSqlConsumer<ResultSet> resultConsumer = resultSet -> {
+			if (resultSet.next()) {
+				gameExisting = true;
+			}
+		};
+		
+		DatabaseConnection.executeCheckedSQL(query, SqlExecutionType.QUERY, variableSetter, resultConsumer);
+		
+		return gameExisting;
 	}
 }

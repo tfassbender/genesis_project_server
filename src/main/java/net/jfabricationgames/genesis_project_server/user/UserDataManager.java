@@ -7,10 +7,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
 import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.spec.SecretKeySpec;
 
 import net.jfabricationgames.genesis_project_server.database.CheckedSqlConsumer;
 import net.jfabricationgames.genesis_project_server.database.DatabaseConnection;
@@ -23,7 +21,7 @@ public class UserDataManager {
 	/**
 	 * Encryption key for passwords. Not loaded from configuration because it's a symmetric key.
 	 */
-	private String passwordEncryptionKey = "vcuh31250hvcsojnl312vcnlsgr329fdsip";
+	//private String passwordEncryptionKey = "vcuh31250hvcsojnl312vcnlsgr329fdsip";
 	private String salt = "ch48cho2nlc";
 	
 	private static MessageDigest md5;
@@ -189,14 +187,15 @@ public class UserDataManager {
 	 */
 	private byte[] getDecryptedPassword(String password)
 			throws NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
-		byte[] key = passwordEncryptionKey.getBytes();
+		/*byte[] key = passwordEncryptionKey.getBytes();
 		
 		Cipher cipher = Cipher.getInstance("AES");
 		SecretKeySpec k = new SecretKeySpec(key, "AES");
 		cipher.init(Cipher.DECRYPT_MODE, k);
 		byte[] data = cipher.doFinal(password.getBytes());
 		
-		return data;
+		return data;*/
+		return password.getBytes();
 	}
 	
 	/**

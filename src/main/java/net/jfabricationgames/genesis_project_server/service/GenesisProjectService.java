@@ -1,6 +1,9 @@
 package net.jfabricationgames.genesis_project_server.service;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
+import java.util.Properties;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -14,6 +17,10 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import net.jfabricationgames.genesis_project_server.config.ConfigurationDataManager;
 import net.jfabricationgames.genesis_project_server.database.DatabaseConnection;
@@ -29,6 +36,36 @@ import net.jfabricationgames.genesis_project_server.util.ErrorUtil;
 public class GenesisProjectService {
 	
 	private static final Logger LOGGER = LogManager.getLogger(GenesisProjectService.class);
+	
+	public static final String TEST_CONFIG_RESOURCE_FILE = "config/test.properties";
+	private static Properties testProperties;
+	
+	static {
+		try {
+			loadTestConfig();
+		}
+		catch (IOException ioe) {
+			LOGGER.fatal("test configuration properties couldn't be loaded (ending programm because of unclear state)", ioe);
+			System.exit(1);
+		}
+	}
+	
+	private static void loadTestConfig() throws IOException {
+		ClassLoader loader = Thread.currentThread().getContextClassLoader();
+		testProperties = new Properties();
+		try (InputStream resourceStream = loader.getResourceAsStream(TEST_CONFIG_RESOURCE_FILE)) {
+			testProperties.load(resourceStream);
+		}
+		if (!testProperties.containsKey("test")) {
+			throw new IOException("property 'test' not found");
+		}
+		else if (isTestRun()) {
+			LOGGER.warn(">>>> GenesisProjectServer started as test run");
+		}
+		else {
+			LOGGER.info(">>>> GenesisProjectServer started as productive run");
+		}
+	}
 	
 	/**
 	 * A simple hello world to test whether the service is reachable
@@ -57,6 +94,7 @@ public class GenesisProjectService {
 			answer = "Database up and running";
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			answer = "Database error: " + e.getClass().getSimpleName() + ": " + e.getLocalizedMessage() + "\n" + ErrorUtil.getStackTraceAsString(e);
 		}
 		
@@ -93,6 +131,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -120,6 +159,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -155,6 +195,7 @@ public class GenesisProjectService {
 			}
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -192,6 +233,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -220,6 +262,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -252,6 +295,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -265,6 +309,7 @@ public class GenesisProjectService {
 	 * @return HTTP codes only:
 	 *         <ul>
 	 *         <li>HTTP 200: OK</li>
+	 *         <li>HTTP 400: Not enough logins in the list (have to be 2)</li>
 	 *         <li>HTTP 403: User validation failed</li>
 	 *         <li>HTTP 404: A user with the update name already exists</li>
 	 *         <li>HTTP 500: Failed</li>
@@ -288,6 +333,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -324,6 +370,7 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -348,12 +395,17 @@ public class GenesisProjectService {
 			GameDataManager gameDataManager = new GameDataManager();
 			GameList gameList = gameDataManager.listGames(complete, username);
 			
-			return Response.status(Status.OK).entity(gameList).build();
+			//manually parse to JSON (to register JavaTimeModule for parsing LocalDate)
+			ObjectWriter ow = new ObjectMapper().registerModule(new JavaTimeModule()).writer();
+			String gameListJson = ow.writeValueAsString(gameList);
+			
+			return Response.status(Status.OK).entity(gameListJson).build();
 		}
 		catch (GameDataException gde) {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
 		}
 	}
@@ -387,7 +439,36 @@ public class GenesisProjectService {
 			return handleGameDataException(gde);
 		}
 		catch (Exception e) {
+			LOGGER.error("an unknown error occured: ", e);
 			return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+		}
+	}
+	
+	/**
+	 * Reset the test database to an initial state. Only works in test environments (see configuration file config/test.properties).
+	 * 
+	 * 
+	 */
+	@GET
+	@Path("reset_test_database")
+	public Response resetTestDatabase() {
+		LOGGER.debug("resetTestDatabase was called");
+		if (!isTestRun()) {
+			return Response.status(Status.FORBIDDEN).entity("The current environment is not a test environment. Resetting test database aborted")
+					.build();
+		}
+		else {
+			try {
+				//the current environment is a test environment, so try to reset it
+				DatabaseConnection dbConnection = DatabaseConnection.getInstance();
+				dbConnection.resetTestDatabase();
+				
+				return Response.status(Status.OK).build();
+			}
+			catch (Exception e) {
+				LOGGER.error("an unknown error occured: ", e);
+				return Response.status(Status.INTERNAL_SERVER_ERROR).build();
+			}
 		}
 	}
 	
@@ -411,5 +492,14 @@ public class GenesisProjectService {
 				break;
 		}
 		return Response.status(responseStatus).build();
+	}
+	
+	public static Properties getTestProperties() {
+		return testProperties;
+	}
+	public static boolean isTestRun() {
+		String testProperty = testProperties.getProperty("test");
+		LOGGER.debug("test property loaded from properties file: {}", testProperty);
+		return Boolean.parseBoolean(testProperty);
 	}
 }

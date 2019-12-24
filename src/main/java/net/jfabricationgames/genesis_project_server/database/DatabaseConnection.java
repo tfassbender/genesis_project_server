@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
@@ -21,6 +22,7 @@ import com.mysql.cj.jdbc.MysqlDataSource;
 
 import net.jfabricationgames.genesis_project_server.exception.GameDataException;
 import net.jfabricationgames.genesis_project_server.exception.GameDataException.Cause;
+import net.jfabricationgames.genesis_project_server.service.GenesisProjectService;
 
 /**
  * Create a connection to a database and add or get values of one specific table for testing.
@@ -42,6 +44,7 @@ public class DatabaseConnection {
 	 */
 	public static final String URL = "jdbc:mysql://mysql?useSSL=false";
 	public static final String DATABASE_CONFIG_RESOURCE_FILE = "config/database.properties";
+	public static final String DATABASE_NAME_REPLACEMENT = "<<DATABASE_NAME>>";
 	
 	public static final String TABLE_GAMES = "games";
 	public static final String TABLE_MOVES = "moves";
@@ -55,10 +58,10 @@ public class DatabaseConnection {
 	 * <p>
 	 * Add the same password in the environment variables of the docker-compose.ylm
 	 */
-	private static String USER_PASSWORD;
-	private static String USER;
-	private static String DATABASE;
-	private static String DATABASE_BUILD_FILE;
+	private String USER_PASSWORD;
+	private String USER;
+	private String DATABASE;
+	private String DATABASE_BUILD_FILE;
 	
 	public static final String VERSION = "1.0.0";
 	
@@ -70,6 +73,15 @@ public class DatabaseConnection {
 		LOGGER.info("Creating DatabaseConnection; current version is " + VERSION);
 		try {
 			loadConfig();
+			
+			if (GenesisProjectService.isTestRun()) {
+				//drop the test database before use to ensure a clean test environment
+				dropTestDatabase();
+			}
+			
+			//test the privileges for testing purposes
+			testPrivileges(USER);
+			
 			createDatabaseResourcesIfNotExists();
 		}
 		catch (SQLException sqle) {
@@ -91,10 +103,8 @@ public class DatabaseConnection {
 	
 	/**
 	 * Load the password from the properties
-	 * 
-	 * @throws IOException
 	 */
-	private void loadConfig() throws IOException {
+	private void loadConfig() throws IOException, SQLException {
 		ClassLoader loader = Thread.currentThread().getContextClassLoader();
 		Properties databaseConfigProperties = new Properties();
 		try (InputStream resourceStream = loader.getResourceAsStream(DATABASE_CONFIG_RESOURCE_FILE)) {
@@ -111,16 +121,90 @@ public class DatabaseConnection {
 		if (USER == null || USER.equals("")) {
 			throw new IOException("No user could be loaded from properties.");
 		}
+		
+		if (GenesisProjectService.isTestRun()) {
+			//use a test database that is deleted before use to create a new testing environment
+			DATABASE = GenesisProjectService.getTestProperties().getProperty("test_db", "genesis_project_test");
+			LOGGER.warn("Starting DatabaseConnection as test run using database: {}", DATABASE);
+		}
 		if (DATABASE == null || DATABASE.equals("")) {
 			throw new IOException("No database could be loaded from properties.");
 		}
+		
+		LOGGER.info("configuration loaded: [USER: {}, DATABASE: {}, USER_PASSWORD loaded: {}]", USER, DATABASE, USER_PASSWORD != null);
+	}
+	
+	/**
+	 * Test which privileges the current user (or a null user) has on the database.
+	 */
+	private void testPrivileges(String user) throws SQLException {
+		LOGGER.info("testing privileges for user: {}", user);
+		//drop the test database before a test to create a new testing environment
+		try (Connection connection = getDataSourceWithoutDatabase().getConnection()) {
+			String query;
+			if (user != null) {
+				query = "SHOW GRANTS FOR " + user + ";";
+			}
+			else {
+				query = "SHOW GRANTS;";
+			}
+			try (PreparedStatement statement = connection.prepareStatement(query)) {
+				//log the result set and the content
+				ResultSet result = statement.executeQuery();
+				ResultSetMetaData meta = result.getMetaData();
+				while (result.next()) {
+					for (int i = 1; i <= meta.getColumnCount(); i++) {
+						String privileges = result.getString(i);
+						LOGGER.info("privileges on database for user {}: {}", user, privileges);
+					}
+				}
+			}
+		}
+		LOGGER.info("test database was dropped successfully");
+	}
+	
+	public void resetTestDatabase() throws SQLException {
+		if (GenesisProjectService.isTestRun()) {
+			LOGGER.warn("resetting test database");
+			dropTestDatabase();
+			createDatabaseResourcesIfNotExists();
+		}
+		else {
+			throw new SQLException("The current environment is no test environment. Abborting reset of test database.");
+		}
+	}
+	
+	private void dropTestDatabase() throws SQLException {
+		final String databaseNotExistingMessage = "database doesn't exist";
+		LOGGER.info("dropping the test database: {}", getDATABASE());
+		//drop the test database before a test to create a new testing environment
+		try (Connection connection = getDataSourceWithoutDatabase().getConnection()) {
+			String query = "DROP DATABASE " + getDATABASE();
+			try (PreparedStatement statement = connection.prepareStatement(query)) {
+				try {
+					statement.execute();
+				}
+				catch (SQLException sqle) {
+					//ignore the exception if it just says that the database doesn't exist (because that's just want we want here)
+					if (!sqle.getMessage().toLowerCase().contains(databaseNotExistingMessage)) {
+						throw sqle;
+					}
+				}
+			}
+		}
+		LOGGER.info("test database was dropped successfully");
 	}
 	
 	private void createDatabaseResourcesIfNotExists() throws SQLException {
 		String query;
 		try {
-			File databaseBuild = new File(DATABASE_BUILD_FILE);
+			//load the database script as a resource
+			ClassLoader loader = Thread.currentThread().getContextClassLoader();
+			String filename = loader.getResource(DATABASE_BUILD_FILE).getFile();
+			File databaseBuild = new File(filename);
 			query = Files.readAllLines(databaseBuild.toPath()).stream().collect(Collectors.joining("\n"));
+			//replace the database name with the name of the current database
+			query = query.replaceAll(DATABASE_NAME_REPLACEMENT, DATABASE);
 		}
 		catch (IOException ioe) {
 			throw new SQLException("query couldn't be loaded", ioe);
@@ -130,7 +214,7 @@ public class DatabaseConnection {
 		try (Connection connection = dataSource.getConnection()) {
 			try (Statement statement = connection.createStatement()) {
 				connection.setAutoCommit(autoCommit);
-				LOGGER.info("Creating database resources (if not exists); sending query: " + query);
+				LOGGER.info("Creating database resources (if not exists); sending query:\n" + query);
 				statement.execute(query);
 				
 				connection.commit();
@@ -159,6 +243,8 @@ public class DatabaseConnection {
 			//enable public key retrieval because I want to get the keys of the inserted data 
 			//(which seems to cause problems when using useSSL=false in the url)
 			dataSource.setAllowPublicKeyRetrieval(true);
+			//enable multiple queries in one statement
+			dataSource.setAllowMultiQueries(true);
 		}
 		catch (SQLException sqle) {
 			sqle.printStackTrace();
@@ -299,14 +385,24 @@ public class DatabaseConnection {
 		}
 	}
 	
-	public static String getTable(String table) {
-		return getDATABASE() + "." + table;
+	/**
+	 * Get the name of the table with a leading database name.
+	 */
+	public static String getTable(String table) throws GameDataException {
+		try {
+			//execute get instance first to load the configuration
+			DatabaseConnection dbConnection = getInstance();
+			return dbConnection.getDATABASE() + "." + table;
+		}
+		catch (SQLException sqle) {
+			throw new GameDataException("An SQLException occured while trying to get a DatabaseConnection instance", sqle, Cause.SQL_EXCEPTION);
+		}
 	}
 	
-	public static String getUSER() {
+	public String getUSER() {
 		return USER;
 	}
-	public static String getDATABASE() {
+	public String getDATABASE() {
 		return DATABASE;
 	}
 }
