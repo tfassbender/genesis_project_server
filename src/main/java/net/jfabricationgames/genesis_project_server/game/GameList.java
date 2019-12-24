@@ -22,6 +22,11 @@ public class GameList {
 		
 	}
 	
+	@Override
+	public String toString() {
+		return "GameList [games=" + games + ", started=" + started + ", lastPlayed=" + lastPlayed + "]";
+	}
+	
 	public Map<Integer, String> getGames() {
 		return games;
 	}
