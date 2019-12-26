@@ -287,6 +287,7 @@ public class GameDataManager {
 		
 		Map<Integer, String> moves = new HashMap<Integer, String>();
 		Map<Integer, Integer> idToNum = new HashMap<Integer, Integer>();
+		Map<Integer, String> idToUsername = new HashMap<Integer, String>();
 		
 		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {
 			int position = 1;
@@ -306,13 +307,15 @@ public class GameDataManager {
 		CheckedSqlConsumer<ResultSet> resultConsumer = resultSet -> {
 			//iterate over the result and add everything into the local maps
 			if (resultSet.next()) {
-				//int id = resultSet.getInt(1);
-				int moveNum = resultSet.getInt(1);
-				String move = resultSet.getString(2);
+				int id = resultSet.getInt(1);
+				int moveNum = resultSet.getInt(2);
+				String move = resultSet.getString(3);
+				String name = resultSet.getString(4);
 				
 				//add the results to the maps
 				moves.put(id, move);
 				idToNum.put(id, moveNum);
+				idToUsername.put(id, name);
 			}
 		};
 		
@@ -322,7 +325,8 @@ public class GameDataManager {
 		//create a move list from the results
 		MoveList moveList = new MoveList();
 		moveList.setMoves(moves);
-		//moveList.setIdToNum(idToNum);
+		moveList.setIdToNum(idToNum);
+		moveList.setIdToUsername(idToUsername);
 		return moveList;
 	}
 	
@@ -332,13 +336,9 @@ public class GameDataManager {
 		return buildMoveListQuery(allGames, allUsers, allMoves, tableMoves, tableUsers);
 	}
 	protected String buildMoveListQuery(boolean allGames, boolean allUsers, boolean allMoves, String tableMoves, String tableUsers) {
-		StringBuilder sb = new StringBuilder("SELECT m.num, m.move FROM " + tableMoves + " m");
+		StringBuilder sb = new StringBuilder(
+				"SELECT m.id, m.num, m.move, u.username FROM " + tableMoves + " m JOIN " + tableUsers + " u ON u.id = m.user_id WHERE");
 		
-		if (!allUsers) {
-			//if not all users the username has to be found (by joining)
-			sb.append(" JOIN " + tableUsers + " u ON u.id = m.user_id");
-		}
-		sb.append(" WHERE");
 		if (allUsers && allGames) {
 			//no conditions -> WHERE 1
 			sb.append(" 1");
