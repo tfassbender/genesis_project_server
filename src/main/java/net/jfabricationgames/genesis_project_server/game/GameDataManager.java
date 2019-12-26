@@ -162,10 +162,10 @@ public class GameDataManager {
 			throw new GameDataException("a game with the id " + gameId + " doesn't exist in the database", Cause.NOT_FOUND);
 		}
 		
-		//get the last move of the game to find the number of the next move
-		MoveList moveList = listMoves(gameId, username, 1);
+		//get the last move of the game (of any user) to find the number of the next move
+		MoveList moveList = listMoves(gameId, "-", 1);
 		int num = 1;
-		Iterator<Integer> numKeys = moveList.getMoves().keySet().iterator();
+		Iterator<Integer> numKeys = moveList.getIdToNum().values().iterator();
 		if (numKeys.hasNext()) {
 			num = numKeys.next() + 1;
 		}
@@ -306,7 +306,7 @@ public class GameDataManager {
 		};
 		CheckedSqlConsumer<ResultSet> resultConsumer = resultSet -> {
 			//iterate over the result and add everything into the local maps
-			if (resultSet.next()) {
+			while (resultSet.next()) {
 				int id = resultSet.getInt(1);
 				int moveNum = resultSet.getInt(2);
 				String move = resultSet.getString(3);
