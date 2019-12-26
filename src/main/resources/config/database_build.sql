@@ -26,4 +26,5 @@ CREATE TABLE IF NOT EXISTS <<DATABASE_NAME>>.moves (
 	game_id INT REFERENCES <<DATABASE_NAME>>.games (id) ON DELETE CASCADE,
 	move TEXT,
 	num INT,
+	CONSTRAINT moveInGame UNIQUE (game_id, num)
 );
