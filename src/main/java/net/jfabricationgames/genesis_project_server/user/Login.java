@@ -9,6 +9,11 @@ public class Login {
 		
 	}
 	
+	@Override
+	public String toString() {
+		return "Login [username=" + username + ", password=" + password + "]";
+	}
+	
 	public Login(String username, String password) {
 		this.username = username;
 		this.password = password;
