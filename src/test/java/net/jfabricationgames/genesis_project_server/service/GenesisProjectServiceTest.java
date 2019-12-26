@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 import javax.ws.rs.client.Client;
@@ -24,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import net.jfabricationgames.genesis_project_server.game.GameList;
+import net.jfabricationgames.genesis_project_server.game.MoveList;
 import net.jfabricationgames.genesis_project_server.user.Login;
 
 class GenesisProjectServiceTest {
@@ -34,6 +36,13 @@ class GenesisProjectServiceTest {
 	private static int game1Id = -1;
 	private static int game2Id = -1;
 	private static int game3Id = -1;
+	private static final String move1Player1 = "unique_move_219805240896";
+	private static final String move2Player1 = "unique_move_0850847956455564";
+	private static final String move3Player1 = "unique_move_80654062304980";
+	private static final String move1Player2 = "unique_move_54641384685231";
+	private static final String move2Player2 = "unique_move_478465231894152";
+	private static final String move3Player2 = "unique_move_897841323587";
+	private static final String move1Player1Game1 = "unique_move_19804563048";
 	
 	private static String getServerUrl() {
 		return "http://jfabricationgames.ddns.net:5715/genesis_project_server/genesis_project/genesis_project/";
@@ -94,6 +103,23 @@ class GenesisProjectServiceTest {
 		if (game1Id < 0 || game2Id < 0 || game3Id < 0) {
 			throw new IllegalStateException("game id is a negative number");
 		}
+		
+		//add some moves to test the list_moves function
+		Response setMove1 = setMove(move1Player1, user1, game3Id);
+		Response setMove2 = setMove(move2Player1, user1, game3Id);
+		Response setMove3 = setMove(move3Player1, user1, game3Id);
+		Response setMove4 = setMove(move1Player2, user2, game3Id);
+		Response setMove5 = setMove(move2Player2, user2, game3Id);
+		Response setMove6 = setMove(move3Player2, user2, game3Id);
+		Response setMove7 = setMove(move1Player1Game1, user1, game1Id);
+		
+		assertEquals(Status.OK.getStatusCode(), setMove1.getStatus());
+		assertEquals(Status.OK.getStatusCode(), setMove2.getStatus());
+		assertEquals(Status.OK.getStatusCode(), setMove3.getStatus());
+		assertEquals(Status.OK.getStatusCode(), setMove4.getStatus());
+		assertEquals(Status.OK.getStatusCode(), setMove5.getStatus());
+		assertEquals(Status.OK.getStatusCode(), setMove6.getStatus());
+		assertEquals(Status.OK.getStatusCode(), setMove7.getStatus());
 	}
 	
 	private static Response createUser(Login login) {
@@ -111,6 +137,13 @@ class GenesisProjectServiceTest {
 	
 	private static Response updateGame(int gameId, String text) {
 		String resource = "update_game/" + gameId + "/" + text;
+		String requestType = "GET";
+		
+		return sendRequest(resource, requestType, null);
+	}
+	
+	private static Response setMove(String move, Login user, int gameId) {
+		String resource = "set_move/" + gameId + "/" + user.getUsername() + "/" + move;
 		String requestType = "GET";
 		
 		return sendRequest(resource, requestType, null);
@@ -233,6 +266,31 @@ class GenesisProjectServiceTest {
 		Response response = sendRequest(resource, requestType, null);
 		//printResponse(response);
 		assertEquals(Status.OK.getStatusCode(), response.getStatus());
+	}
+	
+	@Test
+	public void testSetMove_correctOrderOfMoves() {
+		Response createGame = createGame(Arrays.asList(user1.getUsername(), user2.getUsername()));
+		int gameId = createGame.readEntity(Integer.class);
+		assertEquals(Status.OK.getStatusCode(), createGame.getStatus());
+		
+		setMove("a_move", user1, gameId);
+		setMove("another_move", user2, gameId);
+		
+		String resource = "list_moves/" + gameId + "/-/-1";
+		String requestType = "GET";
+		
+		Response response = sendRequest(resource, requestType, null);
+		String moveListText = response.readEntity(String.class);
+		MoveList moveList = getMoveList(moveListText);
+		
+		assertEquals(2, moveList.getMoves().size());
+		assertEquals(2, moveList.getIdToNum().size());
+		assertEquals(2, moveList.getIdToUsername().size());
+		
+		//the first two entries in the game have to be the move numbers 1 and 2
+		assertTrue(moveList.getIdToNum().values().contains(1));
+		assertTrue(moveList.getIdToNum().values().contains(2));
 	}
 	
 	@Test
@@ -471,6 +529,98 @@ class GenesisProjectServiceTest {
 		assertNull(gameList.getGames().get(game1Id));
 	}
 	
+	@Test
+	public void testListMoves_specificGame_specificUser_last2() {
+		String resource = "list_moves/" + game3Id + "/" + user1.getUsername() + "/2";
+		String requestType = "GET";
+		
+		Response response = sendRequest(resource, requestType, null);
+		String moveListText = response.readEntity(String.class);
+		MoveList moveList = getMoveList(moveListText);
+		
+		assertEquals(2, moveList.getMoves().size());
+		assertEquals(2, moveList.getIdToNum().size());
+		assertEquals(2, moveList.getIdToUsername().size());
+		assertTrue(moveList.getMoves().containsValue(move2Player1));
+		assertTrue(moveList.getMoves().containsValue(move3Player1));
+	}
+	@Test
+	public void testListMoves_allGames_specificUser_allNums() {
+		String resource = "list_moves/-1/" + user1.getUsername() + "/-1";
+		String requestType = "GET";
+		
+		Response response = sendRequest(resource, requestType, null);
+		String moveListText = response.readEntity(String.class);
+		MoveList moveList = getMoveList(moveListText);
+		
+		assertTrue(moveList.getMoves().size() >= 4);//>= because other tests also add moves
+		assertTrue(moveList.getIdToNum().size() >= 4);
+		assertTrue(moveList.getIdToUsername().size() >= 4);
+		assertTrue(moveList.getMoves().containsValue(move1Player1));
+		assertTrue(moveList.getMoves().containsValue(move2Player1));
+		assertTrue(moveList.getMoves().containsValue(move3Player1));
+		assertTrue(moveList.getMoves().containsValue(move1Player1Game1));
+		
+		assertFalse(moveList.getMoves().containsValue(move1Player2));
+		assertFalse(moveList.getMoves().containsValue(move2Player2));
+		assertFalse(moveList.getMoves().containsValue(move3Player2));
+	}
+	@Test
+	public void testListMoves_specificGame_allUsers_last2() {
+		String resource = "list_moves/" + game3Id + "/-/2";
+		String requestType = "GET";
+		
+		Response response = sendRequest(resource, requestType, null);
+		String moveListText = response.readEntity(String.class);
+		MoveList moveList = getMoveList(moveListText);
+		
+		assertEquals(2, moveList.getMoves().size());
+		assertEquals(2, moveList.getIdToNum().size());
+		assertEquals(2, moveList.getIdToUsername().size());
+		assertTrue(moveList.getMoves().containsValue(move2Player2));
+		assertTrue(moveList.getMoves().containsValue(move3Player2));
+		
+		assertFalse(moveList.getMoves().containsValue(move1Player1));
+		assertFalse(moveList.getMoves().containsValue(move1Player2));
+	}
+	@Test
+	public void testListMoves_specificGame_allUsers_allNums() {
+		String resource = "list_moves/" + game3Id + "/-/-1";
+		String requestType = "GET";
+		
+		Response response = sendRequest(resource, requestType, null);
+		String moveListText = response.readEntity(String.class);
+		MoveList moveList = getMoveList(moveListText);
+		
+		assertTrue(moveList.getMoves().size() >= 6);
+		assertTrue(moveList.getIdToNum().size() >= 6);
+		assertTrue(moveList.getIdToUsername().size() >= 6);
+		assertTrue(moveList.getMoves().containsValue(move1Player1));
+		assertTrue(moveList.getMoves().containsValue(move2Player2));
+		assertTrue(moveList.getMoves().containsValue(move3Player2));
+		
+		assertFalse(moveList.getMoves().containsValue(move1Player1Game1));
+		
+		//test whether all move nums are unique
+		assertEquals(moveList.getIdToNum().size(), new HashSet<Integer>(moveList.getIdToNum().values()).size());
+	}
+	@Test
+	public void testListMoves_all() {
+		String resource = "list_moves/-1/-/-1";
+		String requestType = "GET";
+		
+		Response response = sendRequest(resource, requestType, null);
+		String moveListText = response.readEntity(String.class);
+		MoveList moveList = getMoveList(moveListText);
+		
+		assertTrue(moveList.getMoves().size() >= 7);
+		assertTrue(moveList.getIdToNum().size() >= 7);
+		assertTrue(moveList.getIdToUsername().size() >= 7);
+		assertTrue(moveList.getMoves().containsValue(move1Player2));
+		assertTrue(moveList.getMoves().containsValue(move3Player1));
+		assertTrue(moveList.getMoves().containsValue(move1Player1Game1));
+	}
+	
 	private GameList getGameList(String gameListText) {
 		ObjectMapper mapper = new ObjectMapper();
 		//register the module to parse java-8 LocalDate
@@ -483,6 +633,19 @@ class GenesisProjectServiceTest {
 		catch (IOException e) {
 			e.printStackTrace();
 			throw new IllegalStateException("The response could not be read or parsed: " + gameListText, e);
+		}
+	}
+	
+	private MoveList getMoveList(String moveListText) {
+		ObjectMapper mapper = new ObjectMapper();
+		try {
+			//"manually" parse JSON to Object
+			MoveList resp = mapper.readValue(moveListText, MoveList.class);
+			return resp;
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			throw new IllegalStateException("The response could not be read or parsed: " + moveListText, e);
 		}
 	}
 }

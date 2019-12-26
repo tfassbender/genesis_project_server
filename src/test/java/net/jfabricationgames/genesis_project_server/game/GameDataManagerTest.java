@@ -43,28 +43,31 @@ class GameDataManagerTest {
 		String query_allGames_selectedUsers_selectedMoves = manager.buildMoveListQuery(true, false, false, tableMoves, tableUsers);
 		String query_selectedGames_selectedUsers_selectedMoves = manager.buildMoveListQuery(false, false, false, tableMoves, tableUsers);
 		
-		assertEquals("SELECT m.num, m.move FROM " + tableMoves + " m WHERE 1 ORDER BY m.num DESC", query_allGames_allUsers_allMoves);
+		assertEquals("SELECT m.id, m.num, m.move, u.username FROM " + tableMoves + " m JOIN " + tableUsers
+				+ " u ON u.id = m.user_id WHERE 1 ORDER BY m.num DESC", query_allGames_allUsers_allMoves);
 		
-		assertEquals("SELECT m.num, m.move FROM " + tableMoves + " m WHERE m.game_id = ? ORDER BY m.num DESC", query_selectedGames_allUsers_allMoves);
+		assertEquals("SELECT m.id, m.num, m.move, u.username FROM " + tableMoves + " m JOIN " + tableUsers
+				+ " u ON u.id = m.user_id WHERE m.game_id = ? ORDER BY m.num DESC", query_selectedGames_allUsers_allMoves);
 		
-		assertEquals("SELECT m.num, m.move FROM " + tableMoves + " m JOIN " + tableUsers
+		assertEquals("SELECT m.id, m.num, m.move, u.username FROM " + tableMoves + " m JOIN " + tableUsers
 				+ " u ON u.id = m.user_id WHERE u.username = ? ORDER BY m.num DESC", query_allGames_selectedUsers_allMoves);
 		
-		assertEquals("SELECT m.num, m.move FROM " + tableMoves + " m WHERE 1 ORDER BY m.num DESC LIMIT ?", query_allGames_allUsers_selectedMoves);
+		assertEquals("SELECT m.id, m.num, m.move, u.username FROM " + tableMoves + " m JOIN " + tableUsers
+				+ " u ON u.id = m.user_id WHERE 1 ORDER BY m.num DESC LIMIT ?", query_allGames_allUsers_selectedMoves);
 		
 		assertEquals(
-				"SELECT m.num, m.move FROM " + tableMoves + " m JOIN " + tableUsers
+				"SELECT m.id, m.num, m.move, u.username FROM " + tableMoves + " m JOIN " + tableUsers
 						+ " u ON u.id = m.user_id WHERE u.username = ? AND m.game_id = ? ORDER BY m.num DESC",
 				query_selectedGames_selectedUsers_allMoves);
 		
-		assertEquals("SELECT m.num, m.move FROM " + tableMoves + " m WHERE m.game_id = ? ORDER BY m.num DESC LIMIT ?",
-				query_selectedGames_allUsers_selectedMoves);
+		assertEquals("SELECT m.id, m.num, m.move, u.username FROM " + tableMoves + " m JOIN " + tableUsers
+				+ " u ON u.id = m.user_id WHERE m.game_id = ? ORDER BY m.num DESC LIMIT ?", query_selectedGames_allUsers_selectedMoves);
 		
-		assertEquals("SELECT m.num, m.move FROM " + tableMoves + " m JOIN " + tableUsers
+		assertEquals("SELECT m.id, m.num, m.move, u.username FROM " + tableMoves + " m JOIN " + tableUsers
 				+ " u ON u.id = m.user_id WHERE u.username = ? ORDER BY m.num DESC LIMIT ?", query_allGames_selectedUsers_selectedMoves);
 		
 		assertEquals(
-				"SELECT m.num, m.move FROM " + tableMoves + " m JOIN " + tableUsers
+				"SELECT m.id, m.num, m.move, u.username FROM " + tableMoves + " m JOIN " + tableUsers
 						+ " u ON u.id = m.user_id WHERE u.username = ? AND m.game_id = ? ORDER BY m.num DESC LIMIT ?",
 				query_selectedGames_selectedUsers_selectedMoves);
 	}
