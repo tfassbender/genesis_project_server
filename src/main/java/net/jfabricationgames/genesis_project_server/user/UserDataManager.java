@@ -21,7 +21,7 @@ public class UserDataManager {
 	/**
 	 * Encryption key for passwords. Not loaded from configuration because it's a symmetric key.
 	 */
-	//private String passwordEncryptionKey = "vcuh31250hvcsojnl312vcnlsgr329fdsip";
+	private String passwordEncryptionKey = "vcuh31250hvcsojnl312vcnlsgr329fdsip";
 	private String salt = "ch48cho2nlc";
 	
 	private static MessageDigest md5;
@@ -52,6 +52,7 @@ public class UserDataManager {
 		if (userExists(login)) {
 			throw new GameDataException("the user already exists", Cause.NO_PERMISSION);
 		}
+		login.decryptPassword(passwordEncryptionKey);
 		String query = "INSERT INTO " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS) + " (username, password) VALUES (?, ?)";
 		
 		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {
@@ -71,6 +72,8 @@ public class UserDataManager {
 	 *        The users logins: The first has to be the valid current login; The second is the update.
 	 */
 	public void updateUser(Login current, Login update) throws GameDataException {
+		current.decryptPassword(passwordEncryptionKey);
+		update.decryptPassword(passwordEncryptionKey);
 		//verify the users current login first
 		if (verifyUser(current)) {
 			//if the user is verified, update the login
@@ -101,6 +104,7 @@ public class UserDataManager {
 	 * @return Returns true if the login is correct. False otherwise.
 	 */
 	public boolean verifyUser(Login login) throws GameDataException {
+		login.decryptPassword(passwordEncryptionKey);
 		String query = "SELECT password FROM " + DatabaseConnection.getTable(DatabaseConnection.TABLE_USERS) + " WHERE username = ?";
 		
 		CheckedSqlConsumer<PreparedStatement> variableSetter = ps -> {

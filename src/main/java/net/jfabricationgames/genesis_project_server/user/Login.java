@@ -1,5 +1,7 @@
 package net.jfabricationgames.genesis_project_server.user;
 
+import net.jfabricationgames.genesis_project_server.util.Cryptographer;
+
 public class Login {
 	
 	private String username;
@@ -31,5 +33,18 @@ public class Login {
 	}
 	public void setPassword(String password) {
 		this.password = password;
+	}
+	
+	/**
+	 * Encrypt the password symmetrically to not send a clear-text password via an insecure connection.
+	 */
+	public void encryptPassword(String encryptionPassword) {
+		password = Cryptographer.encryptText(password, encryptionPassword);
+	}
+	/**
+	 * Decrypt the encrypted password.
+	 */
+	public void decryptPassword(String encryptionPassword) {
+		password = Cryptographer.decryptText(password, encryptionPassword);
 	}
 }
