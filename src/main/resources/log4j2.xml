@@ -25,8 +25,8 @@
 		</Console>
 	</Appenders>
 	<Loggers>
-		<Logger name="net.jfabricationgames.genesis_project_server" level="debug"
-			additivity="true">
+		<Logger name="net.jfabricationgames.genesis_project_server"
+			level="debug" additivity="false">
 			<appender-ref ref="fileLogger" level="debug" />
 		</Logger>
 		<Root level="debug" additivity="false">
