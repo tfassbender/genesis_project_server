@@ -501,8 +501,6 @@ public class GenesisProjectService {
 	public static boolean isTestRun() {
 		String testProperty = testProperties.getProperty("test");
 		LOGGER.debug("test property loaded from properties file: {}", testProperty);
-		//TODO remove after tests (somehow the property is always loaded as false)
-		return true;
-		//return Boolean.parseBoolean(testProperty);
+		return Boolean.parseBoolean(testProperty);
 	}
 }
