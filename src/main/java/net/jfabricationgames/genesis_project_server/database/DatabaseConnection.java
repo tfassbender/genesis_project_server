@@ -160,7 +160,6 @@ public class DatabaseConnection {
 				}
 			}
 		}
-		LOGGER.info("test database was dropped successfully");
 	}
 	
 	public void resetTestDatabase() throws SQLException {

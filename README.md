@@ -11,6 +11,36 @@ Storing and loading of user data, games or configuration can be done using REST.
 All resources can be accessed using a URI beginning with:  
 [the_host_name]:[the_port__default_is_5715]/genesis_project_server/genesis_project/genesis_project/**[method_and_parameters]**
 
+A short description of all provided methods:
+
+- **.../hello**: Just answers with a 'hello' message to test whether the server is running
+
+- **.../test_db**: Tests whether the database is running and reachable. 
+         
+- **../update_game**: Updates a game in the database to the latest game state
+        
+- **../get_game/{id}**: Requests the current state of a game in the database
+
+- **../get_config/{config}**: Requests a configuration file from the server
+        
+- **../set_move**: Sets a move that was made in a game
+        
+- **../create_game**: Creates a new game
+        
+- **../create_user**: Creates a new user
+        
+- **../update_user**: Updates a user's name or password
+        
+- **../verify_user**: Authenticates a user
+        
+- **../list_games/{complete}/{username}**: Lists all games (or all games of a user)
+
+- **../list_moves/{game_id}/{username}/{num_moves}**: Lists the moves of a game or a user
+
+- **../reset_test_database**: Resets the test database to (re-)create a clean testing environment (by dropping and re-building the complete test database)
+
+A detailed description of all methods:
+
 - **.../hello**: Just answers with a 'hello' message to test whether the server is running
 
 - **.../test_db**: 
@@ -19,11 +49,11 @@ All resources can be accessed using a URI beginning with:
         - If the database is reachable returns the message 'Database up and running'
         - If the database is NOT reachable returns 'Database error: ' followed by a stacktrace that explains the error
          
-- **../update_game/{id}/{game}**:
+- **../update_game**:
     - Updates a game in the database to the latest game state
     - **parameters**:
-        - id: the id of the game in the database
-        - game: the game content as a JSON text
+        - id: the id of the game in the database (as HTTP Header)
+        - game: the game content as a JSON text (as HTTP POST entity)
     - **returns**:
         - HTTP 200 (OK) if the request was successful
         - HTTP 404 (NOT_FOUND) if the game id wasn't found in the database
@@ -43,12 +73,12 @@ All resources can be accessed using a URI beginning with:
     - **returns**:
         - The content of the configuration file (JSON or TXT)
         
-- **../set_move/{game_id}/{username}/{move}**:
+- **../set_move**:
     - Sets a move that was made in a game
     - **parameters**:
-        - game_id: the id of the game in the database
-        - username: the name of the user who made the move
-        - move: the move content as JSON text
+        - game_id: the id of the game in the database (as HTTP Header)
+        - username: the name of the user who made the move (as HTTP Header)
+        - move: the move content as JSON text (as HTTP POST entity)
     - **returns**:
         - HTTP 200 (OK) if the request was successful
         - HTTP 404 (NOT_FOUND) if the game id or the username wasn't found in the database

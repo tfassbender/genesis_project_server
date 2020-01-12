@@ -10,7 +10,7 @@ export MYSQL_DOCKER_VOLUME=genesis_project
 sudo chmod 777 logs/*
 
 #run docker-compose
-docker-compose build
+docker-compose build #--no-cache
 docker-compose up &
 #the docker container will be started in the background
 #use 'docker ps' to see running containers
