@@ -72,7 +72,7 @@ public class UserDataManager {
 	 *        The users logins: The first has to be the valid current login; The second is the update.
 	 */
 	public void updateUser(Login current, Login update) throws GameDataException {
-		current.decryptPassword(passwordEncryptionKey);
+		//don't decrypt the current login, because it will be decrypted in the verifyUser method
 		update.decryptPassword(passwordEncryptionKey);
 		//verify the users current login first
 		if (verifyUser(current)) {

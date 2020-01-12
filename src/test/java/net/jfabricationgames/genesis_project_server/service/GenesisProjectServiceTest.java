@@ -7,12 +7,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -44,20 +48,31 @@ class GenesisProjectServiceTest {
 	private static final String move3Player2 = "unique_move_897841323587";
 	private static final String move1Player1Game1 = "unique_move_19804563048";
 	
+	private static String passwordEncryptionKey = "vcuh31250hvcsojnl312vcnlsgr329fdsip";//encryption key from UserDataManager class
+	
 	private static String getServerUrl() {
 		return "http://jfabricationgames.ddns.net:5715/genesis_project_server/genesis_project/genesis_project/";
 	}
 	
 	private static Response sendRequest(String resource, String requestType, Entity<?> entity) {
+		return sendRequest(resource, requestType, entity, null);
+	}
+	private static Response sendRequest(String resource, String requestType, Entity<?> entity, Map<String, Object> headers) {
 		Client client = ClientBuilder.newClient();
 		WebTarget webTarget = client.target(getServerUrl()).path(resource);
+		Builder builder = webTarget.request();
+		if (headers != null) {
+			for (Entry<String, Object> header : headers.entrySet()) {
+				builder = builder.header(header.getKey(), header.getValue());
+			}
+		}
 		Response response = null;
 		switch (requestType) {
 			case "GET":
-				response = webTarget.request().get();
+				response = builder.get();
 				break;
 			case "POST":
-				response = webTarget.request().post(entity);
+				response = builder.post(entity);
 				break;
 		}
 		return response;
@@ -123,6 +138,7 @@ class GenesisProjectServiceTest {
 	}
 	
 	private static Response createUser(Login login) {
+		login.encryptPassword(passwordEncryptionKey);
 		String resource = "create_user";
 		String requestType = "POST";
 		
@@ -136,17 +152,22 @@ class GenesisProjectServiceTest {
 	}
 	
 	private static Response updateGame(int gameId, String text) {
-		String resource = "update_game/" + gameId + "/" + text;
-		String requestType = "GET";
+		String resource = "update_game";
+		String requestType = "POST";
+		Map<String, Object> headers = new HashMap<String, Object>();
+		headers.put("id", Integer.toString(gameId));
 		
-		return sendRequest(resource, requestType, null);
+		return sendRequest(resource, requestType, Entity.entity(text, MediaType.APPLICATION_JSON), headers);
 	}
 	
 	private static Response setMove(String move, Login user, int gameId) {
-		String resource = "set_move/" + gameId + "/" + user.getUsername() + "/" + move;
-		String requestType = "GET";
+		String resource = "set_move";
+		String requestType = "POST";
+		Map<String, Object> headers = new HashMap<String, Object>();
+		headers.put("game_id", Integer.toString(gameId));
+		headers.put("username", user.getUsername());
 		
-		return sendRequest(resource, requestType, null);
+		return sendRequest(resource, requestType, Entity.entity(move, MediaType.APPLICATION_JSON), headers);
 	}
 	
 	@Test
@@ -260,10 +281,13 @@ class GenesisProjectServiceTest {
 	@Test
 	public void testSetMove_correctIds() {
 		String moveText = "a_move_was_made";
-		String resource = "set_move/" + game1Id + "/" + user1.getUsername() + "/" + moveText;
-		String requestType = "GET";
+		String resource = "set_move";
+		String requestType = "POST";
+		Map<String, Object> headers = new HashMap<String, Object>();
+		headers.put("game_id", Integer.toString(game1Id));
+		headers.put("username", user1.getUsername());
 		
-		Response response = sendRequest(resource, requestType, null);
+		Response response = sendRequest(resource, requestType, Entity.entity(moveText, MediaType.APPLICATION_JSON), headers);
 		//printResponse(response);
 		assertEquals(Status.OK.getStatusCode(), response.getStatus());
 	}
@@ -327,12 +351,14 @@ class GenesisProjectServiceTest {
 	public void testUpdateUser() {
 		//first create the user so it exists and can be updated
 		Login login = new Login("unique_username_4324321", "password");
+		//login is encrypted in createUser method
 		Response response = createUser(login);
 		//printResponse(response);
 		assertEquals(Status.OK.getStatusCode(), response.getStatus());
 		
 		//update the user
 		Login update = new Login("unique_username_53428971", "a_different_password");
+		update.encryptPassword(passwordEncryptionKey);
 		String resource = "update_user";
 		String requestType = "POST";
 		List<Login> updateLogins = Arrays.asList(login, update);
@@ -354,6 +380,7 @@ class GenesisProjectServiceTest {
 		Login update = new Login("unique_username_897564", "a_different_password");
 		//change the password (to test a wrong password)
 		login.setPassword("a_wrong_password");
+		login.encryptPassword(passwordEncryptionKey);
 		String resource = "update_user";
 		String requestType = "POST";
 		List<Login> updateLogins = Arrays.asList(login, update);
@@ -373,6 +400,7 @@ class GenesisProjectServiceTest {
 		
 		//update the user
 		Login update = new Login("unique_username_645324", "a_different_password");
+		update.encryptPassword(passwordEncryptionKey);
 		//change the password (to test a wrong password)
 		login.setUsername("a_not_existing_username_64234e985243");
 		String resource = "update_user";
@@ -438,6 +466,7 @@ class GenesisProjectServiceTest {
 		String resource = "verify_user";
 		String requestType = "POST";
 		Login login = new Login("a_not_existing_username_8642363", "password");
+		login.encryptPassword(passwordEncryptionKey);
 		
 		Response response = sendRequest(resource, requestType, Entity.entity(login, MediaType.APPLICATION_JSON));
 		//printResponse(response);
@@ -451,7 +480,7 @@ class GenesisProjectServiceTest {
 		
 		//update game 1 first to check the content
 		String gameContent = "game_unique_content_8943218642";
-		Response updateGame = sendRequest("update_game/" + game1Id + "/" + gameContent, "GET", null);
+		Response updateGame = updateGame(game1Id, gameContent);
 		
 		Response response = sendRequest(resource, requestType, null);
 		String gameListText = response.readEntity(String.class);
@@ -472,7 +501,7 @@ class GenesisProjectServiceTest {
 		
 		//update game 1 first to check the content
 		String gameContent = "game_unique_content_34984651563857448";
-		Response updateGame = sendRequest("update_game/" + game1Id + "/" + gameContent, "GET", null);
+		Response updateGame = updateGame(game1Id, gameContent);
 		
 		Response response = sendRequest(resource, requestType, null);
 		String gameListText = response.readEntity(String.class);
@@ -493,7 +522,7 @@ class GenesisProjectServiceTest {
 		
 		//update game 1 first to check the content
 		String gameContent = "game_unique_content_786123089431";
-		Response updateGame = sendRequest("update_game/" + game1Id + "/" + gameContent, "GET", null);
+		Response updateGame = updateGame(game1Id, gameContent);
 		
 		Response response = sendRequest(resource, requestType, null);
 		String gameListText = response.readEntity(String.class);
@@ -514,7 +543,7 @@ class GenesisProjectServiceTest {
 		
 		//update game 1 first to check the content
 		String gameContent = "game_unique_content_1896432185160";
-		Response updateGame = sendRequest("update_game/" + game1Id + "/" + gameContent, "GET", null);
+		Response updateGame = updateGame(game1Id, gameContent);
 		
 		Response response = sendRequest(resource, requestType, null);
 		String gameListText = response.readEntity(String.class);
