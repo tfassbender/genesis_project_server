@@ -17,7 +17,7 @@
 		<jaxrs.version>2.1.1</jaxrs.version>
 		<!-- Using higher versions of mysql connector will cause problems with 
 			the current tomcat (version 8) because of the java versions that are used -->
-		<mysqlconnector.version>8.0.11</mysqlconnector.version>
+		<mysqlconnector.version>8.0.28</mysqlconnector.version>
 		<junit.version>5.4.0</junit.version>
 		<mockito.version>1.9.5</mockito.version>
 		<log4j.version>2.11.0</log4j.version>
